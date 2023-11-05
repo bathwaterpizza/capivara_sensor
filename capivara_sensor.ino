@@ -92,11 +92,14 @@ void setup() {
   WiFi.disconnect(true);  //clean up previous connections
 
   Serial.print(F("[INFO ] Connecting to "));
-  Serial.println(ssid);
+  Serial.println(SSID);
 
-  //WiFi.begin(ssid, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
-  WiFi.begin(ssid, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, PASSWORD);  // without cert
-
+  //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
+  if (WPA2_ENTERPRISE)
+    WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, PASSWORD);  // without cert, wpa2-e
+  else
+    WiFi.begin(SSID, PASSWORD);  // without cert, wpa2-psk
+  
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(F("."));
