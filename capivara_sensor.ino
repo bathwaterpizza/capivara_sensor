@@ -1,10 +1,13 @@
-#include <rdm6300.h>           // rfid reader
-#include <WiFi.h>              // wifi
-#include <HTTPClient.h>        // wifi
-#include "esp_wpa2.h"          // esp32 WPA2-E support
-#include "mbedtls/md.h"        // esp32 hashing
-#include <HardwareSerial.h>    // note: reassigned UART 1 to GPIO 2, 4
-#include <DFPlayerMini_Fast.h> // amplifier
+#include <rdm6300.h>            // rfid reader
+#include <WiFi.h>               // wifi
+#include <HTTPClient.h>         // wifi
+#include "esp_wpa2.h"           // esp32 WPA2-E support
+#include "mbedtls/md.h"         // esp32 hashing
+#include <HardwareSerial.h>     // UART serial. note: reassigned Serial1 to GPIO 2, 4
+#include <DFPlayerMini_Fast.h>  // amplifier
+// trying without this first
+//#include <FreeRTOS.h>          // scheduler
+//#include <task.h>              // tasks
 
 // display libs
 #include <SPI.h>
@@ -12,18 +15,31 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-// networking constants
+// constants
 #include "secrets.hpp"
+#define RFID_READ_LED_PIN 5
+#define WIFI_CONNECTED_LED_PIN 13
 
 // config
-#define SSD1306_NO_SPLASH // disable display startup art
-//#define DEBUG_IGNORE_WIFI //dont use wifi
+#define SSD1306_NO_SPLASH  // disable display startup art
+//#define DEBUG_IGNORE_WIFI  // useful for testing
 
-// globals and instances
+// globals
 Rdm6300 rdm6300;
 HTTPClient http;
 DFPlayerMini_Fast player;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
+
+/*
+This task waits 1 second and turns off the rfid reading indicator LED
+*/
+void task_disable_read_led(void* params) {
+  vTaskDelay(pdMS_TO_TICKS(1000));  // local delay
+
+  digitalWrite(RFID_READ_LED_PIN, LOW);
+
+  vTaskDelete(NULL);  // delete current task, this might be unnecessary
+}
 
 /*
 Takes the array of bytes output from hashing and converts it to a hexadecimal string,
@@ -82,7 +98,31 @@ int send_http_post(String tag) {
   return responseCode;
 }
 
+void on_wifi_connect() {
+  digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
+
+  Serial.print(F("\n[INFO ] Connected! IP: "));
+  Serial.print(WiFi.localIP());
+  Serial.print(F(" | MAC: "));
+  Serial.println(WiFi.macAddress());
+}
+
+void on_wifi_disconnect() {
+  digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
+
+  Serial.println(F("\n[INFO ] Disconnected!"));
+
+  // try reconnect
+}
+
 void setup() {
+  // pin setup
+  pinMode(RFID_READ_LED_PIN, OUTPUT);
+  pinMode(WIFI_CONNECTED_LED_PIN, OUTPUT);
+  digitalWrite(RFID_READ_LED_PIN, LOW);
+  digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
+
+  // serial setup
   Serial.begin(115200);             // RX/TX 1 on the board, which actually maps to Serial 0
   Serial2.begin(RDM6300_BAUDRATE);  // RX/TX 2
   rdm6300.begin(&Serial2);
@@ -92,18 +132,23 @@ void setup() {
   player.begin(Serial1, false);
   player.volume(30);  // max volume
 
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // this I2C address is specific to our display module
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // this I2C address is specific to our display module
   display.clearDisplay();
 
   delay(1000);  //wait for serial monitor
 #ifndef DEBUG_IGNORE_WIFI
+  // wifi setup
   WiFi.disconnect(true);  //clean up previous connections
 
   Serial.print(F("[INFO ] Connecting to "));
   Serial.println(SSID);
 
+  // registering callbacks
+  WiFi.onEvent(on_wifi_connect, SYSTEM_EVENT_STA_CONNECTED);
+  WiFi.onEvent(on_wifi_disconnect, SYSTEM_EVENT_STA_DISCONNECTED);
+
   //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
-  
+
   if (WPA2_ENTERPRISE) {
     WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, PASSWORD);  // without cert, wpa2-e
   } else {
@@ -114,16 +159,21 @@ void setup() {
     delay(500);
     Serial.print(F("."));
   }
-
-  Serial.print(F("\n[INFO ] Connected! IP: "));
-  Serial.print(WiFi.localIP());
-  Serial.print(F(" | MAC: "));
-  Serial.println(WiFi.macAddress());
 #endif
 }
 
 void loop() {
   if (rdm6300.get_new_tag_id()) {  // true when a new tag shows up in the buffer
+    digitalWrite(RFID_READ_LED_PIN, HIGH);
+    xTaskCreate( // create a task to turn off the read LED
+      task_disable_read_led,
+      "Delayed GPIO write task",
+      1000,
+      NULL,
+      1,
+      NULL
+    );
+
     uint32_t tag = rdm6300.get_tag_id();
     String tagStr = String(tag, HEX);
     tagStr.toUpperCase();
@@ -147,7 +197,9 @@ void loop() {
   }
 
 #ifndef DEBUG_IGNORE_WIFI
-  if (WiFi.status() != WL_CONNECTED)
+  if (WiFi.status() != WL_CONNECTED) // not necessary after we implement events, and reconnect inside the disconnect event, or figure out the auto reconnect
+  {
     WiFi.reconnect();
+  }
 #endif
 }
