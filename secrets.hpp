@@ -1,3 +1,8 @@
+/*
+Variables for network configuration
+Their definitions should be hidden from git
+*/
+
 #ifndef _NETWORK_SECRETS
 #define _NETWORK_SECRETS
 

@@ -18,7 +18,7 @@
 #include "secrets.hpp"
 
 #define SSD1306_NO_SPLASH
-#define DEBUG_IGNORE_WIFI
+//#define DEBUG_IGNORE_WIFI //dont use wifi
 
 Rdm6300 rdm6300;
 HTTPClient http;
@@ -49,7 +49,7 @@ void print_display_text(String text, int start_y, int size) {
 
 int sendPOST(String tag) {
   // # (hash tag.. lmao)
-  Serial.println("[INFO ] Hashing");
+  Serial.println(F("[INFO ] Hashing"));
 
   byte hashResult[32];
   mbedtls_md_context_t hashConfig;
@@ -63,7 +63,7 @@ int sendPOST(String tag) {
   mbedtls_md_free(&hashConfig);
 
   // send hashed tag
-  Serial.println("[INFO ] Sending HTTP POST request");
+  Serial.println(F("[INFO ] Sending HTTP POST request"));
 
   http.begin(POST_ADDRESS);
   http.addHeader("Content-Type", "application/json");
@@ -95,11 +95,12 @@ void setup() {
   Serial.println(SSID);
 
   //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
-  if (WPA2_ENTERPRISE)
+  if (WPA2_ENTERPRISE) {
     WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, PASSWORD);  // without cert, wpa2-e
-  else
+  } else {
     WiFi.begin(SSID, PASSWORD);  // without cert, wpa2-psk
-  
+  }
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(F("."));
@@ -119,19 +120,19 @@ void loop() {
     tagStr.toUpperCase();
     int response;
 
-    Serial.print("[EVENT] Tag received: ");
+    Serial.print(F("[EVENT] Tag received: "));
     Serial.print(tag);
-    Serial.print(" (0x");
+    Serial.print(F(" (0x"));
     Serial.print(tagStr);
-    Serial.println(")");
+    Serial.println(F(")"));
     print_display_text(tagStr, 0, 3);
 
-    player.playNext();
+    player.playNext();  //sound
 
 #ifndef DEBUG_IGNORE_WIFI
     response = sendPOST(tagStr);  // loop gets halted here, could be in a different task
 
-    Serial.print("[EVENT] Got response: ");
+    Serial.print(F("[EVENT] Got response: "));
     Serial.println(response);
 #endif
   }
