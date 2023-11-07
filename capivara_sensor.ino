@@ -1,12 +1,10 @@
-#include <rdm6300.h>     // rfid
-#include <WiFi.h>        // wifi
-#include <HTTPClient.h>  // wifi
-#include "esp_wpa2.h"    // WPA2-E support
-#include "mbedtls/md.h"  // hashing
-
-// reassigned UART 1 to GPIO 2, 4
-#include <HardwareSerial.h>
-#include <DFPlayerMini_Fast.h>
+#include <rdm6300.h>           // rfid reader
+#include <WiFi.h>              // wifi
+#include <HTTPClient.h>        // wifi
+#include "esp_wpa2.h"          // esp32 WPA2-E support
+#include "mbedtls/md.h"        // esp32 hashing
+#include <HardwareSerial.h>    // note: reassigned UART 1 to GPIO 2, 4
+#include <DFPlayerMini_Fast.h> // amplifier
 
 // display libs
 #include <SPI.h>
@@ -14,18 +12,24 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-// network config
+// networking constants
 #include "secrets.hpp"
 
-#define SSD1306_NO_SPLASH
+// config
+#define SSD1306_NO_SPLASH // disable display startup art
 //#define DEBUG_IGNORE_WIFI //dont use wifi
 
+// globals and instances
 Rdm6300 rdm6300;
 HTTPClient http;
 DFPlayerMini_Fast player;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
-String hashBytesToHexString(byte* hash) {
+/*
+Takes the array of bytes output from hashing and converts it to a hexadecimal string,
+which is the usual text representation, to send over wifi
+*/
+String hash_bytes_to_hex_str(byte* hash) {
   String hexStr = "";
 
   for (int i = 0; i < 32; i++) {
@@ -38,6 +42,10 @@ String hashBytesToHexString(byte* hash) {
   return hexStr;
 }
 
+/*
+Wrapping some functionality from the display library to print text to our display,
+given a size and the starting height
+*/
 void print_display_text(String text, int start_y, int size) {
   display.clearDisplay();
   display.setTextSize(size);
@@ -47,8 +55,7 @@ void print_display_text(String text, int start_y, int size) {
   display.display();
 }
 
-int sendPOST(String tag) {
-  // # (hash tag.. lmao)
+int send_http_post(String tag) {
   Serial.println(F("[INFO ] Hashing"));
 
   byte hashResult[32];
@@ -68,7 +75,7 @@ int sendPOST(String tag) {
   http.begin(POST_ADDRESS);
   http.addHeader("Content-Type", "application/json");
 
-  int responseCode = http.POST("{\"tag_id\":\"" + hashBytesToHexString(hashResult) + "\"}");
+  int responseCode = http.POST("{\"tag_id\":\"" + hash_bytes_to_hex_str(hashResult) + "\"}");
 
   http.end();
 
@@ -80,11 +87,12 @@ void setup() {
   Serial2.begin(RDM6300_BAUDRATE);  // RX/TX 2
   rdm6300.begin(&Serial2);
 
-  Serial1.begin(9600, SERIAL_8N1, 4, 2);  // ESP32: RX1 = D4, TX1 = D2
+  // note we are reassigning UART 1 to RX1 = D4, TX1 = D2 on the ESP32
+  Serial1.begin(9600, SERIAL_8N1, 4, 2);
   player.begin(Serial1, false);
   player.volume(30);  // max volume
 
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C); // this I2C address is specific to our display module
   display.clearDisplay();
 
   delay(1000);  //wait for serial monitor
@@ -95,6 +103,7 @@ void setup() {
   Serial.println(SSID);
 
   //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
+  
   if (WPA2_ENTERPRISE) {
     WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, PASSWORD);  // without cert, wpa2-e
   } else {
@@ -127,10 +136,10 @@ void loop() {
     Serial.println(F(")"));
     print_display_text(tagStr, 0, 3);
 
-    player.playNext();  //sound
+    player.playNext();  //play sound
 
 #ifndef DEBUG_IGNORE_WIFI
-    response = sendPOST(tagStr);  // loop gets halted here, could be in a different task
+    response = send_http_post(tagStr);  // loop gets halted here, could be in a different task
 
     Serial.print(F("[EVENT] Got response: "));
     Serial.println(response);
