@@ -19,6 +19,7 @@
 #include "secrets.hpp"
 #define RFID_READ_LED_PIN 5
 #define WIFI_CONNECTED_LED_PIN 13
+#define BUZZER_PIN 12
 
 // config
 #define SSD1306_NO_SPLASH  // disable display startup art
@@ -31,14 +32,26 @@ DFPlayerMini_Fast player;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
 /*
-This task waits 1 second and turns off the rfid reading indicator LED
+This task blinks the rfid reading indicator LED for 1 second
 */
-void task_disable_read_led(void* params) {
+void task_blink_read_led(void* params) {
+  digitalWrite(RFID_READ_LED_PIN, HIGH);
+
   vTaskDelay(pdMS_TO_TICKS(1000));  // local delay
 
   digitalWrite(RFID_READ_LED_PIN, LOW);
 
   vTaskDelete(NULL);  // delete current task, this might be unnecessary
+}
+
+void task_play_tone(void* params) {
+  digitalWrite(BUZZER_PIN, HIGH);
+
+  vTaskDelay(pdMS_TO_TICKS(200));
+  
+  digitalWrite(BUZZER_PIN, LOW);
+
+  vTaskDelete(NULL);
 }
 
 /*
@@ -101,7 +114,7 @@ int send_http_post(String tag) {
 void on_wifi_connect() {
   digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
 
-  Serial.print(F("\n[INFO ] Connected! IP: "));
+  Serial.print(F("\n[INFO ] Wi-Fi Connected! IP: "));
   Serial.print(WiFi.localIP());
   Serial.print(F(" | MAC: "));
   Serial.println(WiFi.macAddress());
@@ -110,7 +123,7 @@ void on_wifi_connect() {
 void on_wifi_disconnect() {
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
 
-  Serial.println(F("\n[INFO ] Disconnected!"));
+  Serial.println(F("\n[INFO ] Wi-Fi Disconnected!"));
 
   // try reconnect
 }
@@ -119,8 +132,10 @@ void setup() {
   // pin setup
   pinMode(RFID_READ_LED_PIN, OUTPUT);
   pinMode(WIFI_CONNECTED_LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
   digitalWrite(RFID_READ_LED_PIN, LOW);
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
+  digitalWrite(BUZZER_PIN, LOW);
 
   // serial setup
   Serial.begin(115200);             // RX/TX 1 on the board, which actually maps to Serial 0
@@ -163,11 +178,18 @@ void setup() {
 }
 
 void loop() {
-  if (rdm6300.get_new_tag_id()) {  // true when a new tag shows up in the buffer
-    digitalWrite(RFID_READ_LED_PIN, HIGH);
-    xTaskCreate( // create a task to turn off the read LED
-      task_disable_read_led,
-      "Delayed GPIO write task",
+  if (rdm6300.get_new_tag_id()) {  // true when a new tag shows up in the uart buffer
+    xTaskCreate( // create a task to blink the read LED
+      task_blink_read_led,
+      "Read LED task",
+      1000,
+      NULL,
+      2,
+      NULL
+    );
+    xTaskCreate( // create a task to play a tone using our buzzer
+      task_play_tone,
+      "Buzzer task",
       1000,
       NULL,
       1,
