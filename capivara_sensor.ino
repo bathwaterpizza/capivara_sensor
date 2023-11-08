@@ -55,7 +55,23 @@ void task_play_tone(void* params) {
     vTaskDelay(pdMS_TO_TICKS(200));
   }
 
-  delete (int*)params;
+  delete static_cast<int*>(params);
+  vTaskDelete(NULL);
+}
+
+/*
+This task simply encapsulates the call to send an http request, in order to avoid blocking the main loop
+It does not yet return the response
+*/
+void task_http_post(void* params) {
+  String* hashStr = static_cast<String*>(params);
+  Serial.print("[DEBUG] Hash received in task: ");
+  Serial.println(*hashStr);
+  
+  // maybe this needs to be called on core 0 specifically
+  http.POST("{\"tag_id\":\"" + *hashStr + "\"}"); // this call is blocking 
+
+  delete hashStr;
   vTaskDelete(NULL);
 }
 
@@ -110,11 +126,20 @@ int send_http_post(String tag) {
   http.begin(POST_ADDRESS);
   http.addHeader("Content-Type", "application/json");
 
-  int responseCode = http.POST("{\"tag_id\":\"" + hash_bytes_to_hex_str(hashResult) + "\"}");
+  //int responseCode = http.POST("{\"tag_id\":\"" + hash_bytes_to_hex_str(hashResult) + "\"}");
+  String* hashStrParam = new String(hash_bytes_to_hex_str(hashResult));
+  xTaskCreate(
+    task_http_post,
+    "HTTP POST task",
+    10000,
+    hashStrParam,
+    1,
+    NULL);
 
   http.end();
 
-  return responseCode;
+  //return responseCode;
+  return 69;
 }
 
 /*
@@ -213,12 +238,12 @@ void loop() {
       NULL,
       2,
       NULL);
-    int* param = new int{ 1 };
+    int* buzzCountParam = new int{ 1 };
     xTaskCreate(
       task_play_tone,
       "Buzzer task",
       1000,
-      param,
+      buzzCountParam,
       1,
       NULL);
 
@@ -237,7 +262,17 @@ void loop() {
     player.playNext();  //play sound, this call is non-blocking
 
 #ifndef DEBUG_IGNORE_WIFI
-    response = send_http_post(tagStr);  // loop gets halted here, could be in a different task
+    /*
+    String* tagStrParam = new String(tagStr);
+    xTaskCreate(
+      task_http_post,
+      "HTTP POST task",
+      1000,
+      tagStrParam,
+      1,
+      NULL);
+    */
+    response = send_http_post(tagStr);  // loop gets halted here, should be in a different task
 
     Serial.print(F("[EVENT] Got response: "));
     Serial.println(response);
