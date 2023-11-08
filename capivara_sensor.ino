@@ -42,15 +42,20 @@ void task_blink_read_led(void* params) {
 }
 
 /*
-This task plays a sound using the buzzer for 200ms
+This task plays a sound using the buzzer for 200ms and sleeps for 200ms
+It takes one dynamically allocated int as a parameter, which is the amount of times it will repeat the cycle above,
+and then frees the the int memory
 */
 void task_play_tone(void* params) {
-  digitalWrite(BUZZER_PIN, HIGH);
+  for (int i = 0; i < *(int*)params; i++) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    vTaskDelay(pdMS_TO_TICKS(200));
 
-  vTaskDelay(pdMS_TO_TICKS(200));
+    digitalWrite(BUZZER_PIN, LOW);
+    vTaskDelay(pdMS_TO_TICKS(200));
+  }
 
-  digitalWrite(BUZZER_PIN, LOW);
-
+  delete (int*)params;
   vTaskDelete(NULL);
 }
 
@@ -113,15 +118,18 @@ int send_http_post(String tag) {
 
 void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
+  int *param = new int {2};
   xTaskCreate(
       task_play_tone,
       "Buzzer task",
       1000,
-      NULL,
+      param,
       1,
       NULL);
 
-  Serial.print(F("\n[INFO ] Wi-Fi Connected! IP: "));
+  Serial.print(F("[INFO ] Wi-Fi Connected to "));
+  Serial.print(SSID);
+  Serial.print(F("! IP: "));
   Serial.print(WiFi.localIP());
   Serial.print(F(" | MAC: "));
   Serial.println(WiFi.macAddress());
@@ -129,15 +137,16 @@ void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
 
 void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
+  int *param = new int {3};
   xTaskCreate(
-      task_play_tone,
-      "Buzzer task",
-      1000,
-      NULL,
-      1,
-      NULL);
+    task_play_tone,
+    "Buzzer task",
+    1000,
+    param,
+    1,
+    NULL);
 
-  Serial.println(F("\n[INFO ] Wi-Fi Disconnected!"));
+  Serial.println(F("[INFO ] Wi-Fi Disconnected!"));
 
   // todo try reconnect
 }
@@ -173,7 +182,8 @@ void setup() {
   Serial.println(SSID);
 
   // registering callbacks
-  WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+  //WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+  WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_GOT_IP);
   WiFi.onEvent(on_wifi_disconnect, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
   //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
@@ -183,11 +193,7 @@ void setup() {
   } else {
     WiFi.begin(SSID, PASSWORD);  // without cert, wpa2-psk
   }
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(F("."));
-  }
+  // todo set auto reconnect, so we dont need to reconnect inside on_disconnect manually, and test it
 #endif
 }
 
@@ -200,11 +206,12 @@ void loop() {
       NULL,
       2,
       NULL);
-    xTaskCreate(  // create a task to play a tone using our buzzer
+    int *param = new int {1};
+    xTaskCreate(
       task_play_tone,
       "Buzzer task",
       1000,
-      NULL,
+      param,
       1,
       NULL);
 
@@ -220,7 +227,8 @@ void loop() {
     Serial.println(F(")"));
     print_display_text(tagStr, 0, 3);
 
-    player.playNext();  //play sound
+    // is it this or send_post that's blocking our loop? prob. post
+    player.playNext();  //play sound, could be in a different task
 
 #ifndef DEBUG_IGNORE_WIFI
     response = send_http_post(tagStr);  // loop gets halted here, could be in a different task
@@ -229,13 +237,4 @@ void loop() {
     Serial.println(response);
 #endif
   }
-
-#ifndef DEBUG_IGNORE_WIFI
-  /*
-  if (WiFi.status() != WL_CONNECTED)  // not necessary after we implement events, and reconnect inside the disconnect event, or figure out the auto reconnect
-  {
-    WiFi.reconnect();
-  }
-  */
-#endif
 }
