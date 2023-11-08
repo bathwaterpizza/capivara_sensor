@@ -1,13 +1,10 @@
 #include <rdm6300.h>            // rfid reader
 #include <WiFi.h>               // wifi
 #include <HTTPClient.h>         // wifi
-#include "esp_wpa2.h"           // esp32 WPA2-E support
-#include "mbedtls/md.h"         // esp32 hashing
+#include <esp_wpa2.h>           // esp32 WPA2-E support
+#include <mbedtls/md.h>         // esp32 hashing
 #include <HardwareSerial.h>     // UART serial. note: reassigned Serial1 to GPIO 2, 4
 #include <DFPlayerMini_Fast.h>  // amplifier
-// trying without this first
-//#include <FreeRTOS.h>          // scheduler
-//#include <task.h>              // tasks
 
 // display libs
 #include <SPI.h>
@@ -17,9 +14,9 @@
 
 // constants
 #include "secrets.hpp"
-#define RFID_READ_LED_PIN 5
-#define WIFI_CONNECTED_LED_PIN 13
-#define BUZZER_PIN 12
+#define RFID_READ_LED_PIN 5        // green led
+#define WIFI_CONNECTED_LED_PIN 13  // blue led
+#define BUZZER_PIN 12              // active buzzer
 
 // config
 #define SSD1306_NO_SPLASH  // disable display startup art
@@ -44,11 +41,14 @@ void task_blink_read_led(void* params) {
   vTaskDelete(NULL);  // delete current task, this might be unnecessary
 }
 
+/*
+This task plays a sound using the buzzer for 200ms
+*/
 void task_play_tone(void* params) {
   digitalWrite(BUZZER_PIN, HIGH);
 
   vTaskDelay(pdMS_TO_TICKS(200));
-  
+
   digitalWrite(BUZZER_PIN, LOW);
 
   vTaskDelete(NULL);
@@ -111,8 +111,15 @@ int send_http_post(String tag) {
   return responseCode;
 }
 
-void on_wifi_connect() {
+void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
+  xTaskCreate(
+      task_play_tone,
+      "Buzzer task",
+      1000,
+      NULL,
+      1,
+      NULL);
 
   Serial.print(F("\n[INFO ] Wi-Fi Connected! IP: "));
   Serial.print(WiFi.localIP());
@@ -120,12 +127,19 @@ void on_wifi_connect() {
   Serial.println(WiFi.macAddress());
 }
 
-void on_wifi_disconnect() {
+void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
+  xTaskCreate(
+      task_play_tone,
+      "Buzzer task",
+      1000,
+      NULL,
+      1,
+      NULL);
 
   Serial.println(F("\n[INFO ] Wi-Fi Disconnected!"));
 
-  // try reconnect
+  // todo try reconnect
 }
 
 void setup() {
@@ -139,6 +153,7 @@ void setup() {
 
   // serial setup
   Serial.begin(115200);             // RX/TX 1 on the board, which actually maps to Serial 0
+  while (!Serial) { delay(100); }   // wait for serial monitor
   Serial2.begin(RDM6300_BAUDRATE);  // RX/TX 2
   rdm6300.begin(&Serial2);
 
@@ -150,7 +165,6 @@ void setup() {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // this I2C address is specific to our display module
   display.clearDisplay();
 
-  delay(1000);  //wait for serial monitor
 #ifndef DEBUG_IGNORE_WIFI
   // wifi setup
   WiFi.disconnect(true);  //clean up previous connections
@@ -159,8 +173,8 @@ void setup() {
   Serial.println(SSID);
 
   // registering callbacks
-  WiFi.onEvent(on_wifi_connect, SYSTEM_EVENT_STA_CONNECTED);
-  WiFi.onEvent(on_wifi_disconnect, SYSTEM_EVENT_STA_DISCONNECTED);
+  WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_CONNECTED);
+  WiFi.onEvent(on_wifi_disconnect, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
   //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
 
@@ -179,22 +193,20 @@ void setup() {
 
 void loop() {
   if (rdm6300.get_new_tag_id()) {  // true when a new tag shows up in the uart buffer
-    xTaskCreate( // create a task to blink the read LED
+    xTaskCreate(                   // create a task to blink the read LED
       task_blink_read_led,
       "Read LED task",
       1000,
       NULL,
       2,
-      NULL
-    );
-    xTaskCreate( // create a task to play a tone using our buzzer
+      NULL);
+    xTaskCreate(  // create a task to play a tone using our buzzer
       task_play_tone,
       "Buzzer task",
       1000,
       NULL,
       1,
-      NULL
-    );
+      NULL);
 
     uint32_t tag = rdm6300.get_tag_id();
     String tagStr = String(tag, HEX);
@@ -219,9 +231,11 @@ void loop() {
   }
 
 #ifndef DEBUG_IGNORE_WIFI
-  if (WiFi.status() != WL_CONNECTED) // not necessary after we implement events, and reconnect inside the disconnect event, or figure out the auto reconnect
+  /*
+  if (WiFi.status() != WL_CONNECTED)  // not necessary after we implement events, and reconnect inside the disconnect event, or figure out the auto reconnect
   {
     WiFi.reconnect();
   }
+  */
 #endif
 }
