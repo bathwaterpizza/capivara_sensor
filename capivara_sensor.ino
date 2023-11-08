@@ -44,7 +44,7 @@ void task_blink_read_led(void* params) {
 /*
 This task plays a sound using the buzzer for 200ms and sleeps for 200ms
 It takes one dynamically allocated int as a parameter, which is the amount of times it will repeat the cycle above,
-and then frees the the int memory
+and takes care of freeing the int
 */
 void task_play_tone(void* params) {
   for (int i = 0; i < *(int*)params; i++) {
@@ -89,9 +89,10 @@ void print_display_text(String text, int start_y, int size) {
   display.display();
 }
 
+/*
+Hashes the tag parameter and sends it over the wifi that is currently connected
+*/
 int send_http_post(String tag) {
-  Serial.println(F("[INFO ] Hashing"));
-
   byte hashResult[32];
   mbedtls_md_context_t hashConfig;
   mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
@@ -116,16 +117,19 @@ int send_http_post(String tag) {
   return responseCode;
 }
 
+/*
+Called when we get assigned an IP at the network we're connecting to
+*/
 void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
-  int *param = new int {2};
+  int* param = new int{ 2 };
   xTaskCreate(
-      task_play_tone,
-      "Buzzer task",
-      1000,
-      param,
-      1,
-      NULL);
+    task_play_tone,
+    "Buzzer task",
+    1000,
+    param,
+    1,
+    NULL);
 
   Serial.print(F("[INFO ] Wi-Fi Connected to "));
   Serial.print(SSID);
@@ -135,9 +139,12 @@ void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   Serial.println(WiFi.macAddress());
 }
 
+/*
+Called when the wifi connection is lost or reset
+*/
 void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
-  int *param = new int {3};
+  int* param = new int{ 3 };
   xTaskCreate(
     task_play_tone,
     "Buzzer task",
@@ -148,7 +155,7 @@ void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
 
   Serial.println(F("[INFO ] Wi-Fi Disconnected!"));
 
-  // todo try reconnect
+  // todo auto reconnect
 }
 
 void setup() {
@@ -206,7 +213,7 @@ void loop() {
       NULL,
       2,
       NULL);
-    int *param = new int {1};
+    int* param = new int{ 1 };
     xTaskCreate(
       task_play_tone,
       "Buzzer task",
@@ -227,8 +234,7 @@ void loop() {
     Serial.println(F(")"));
     print_display_text(tagStr, 0, 3);
 
-    // is it this or send_post that's blocking our loop? prob. post
-    player.playNext();  //play sound, could be in a different task
+    player.playNext();  //play sound, this call is non-blocking
 
 #ifndef DEBUG_IGNORE_WIFI
     response = send_http_post(tagStr);  // loop gets halted here, could be in a different task
