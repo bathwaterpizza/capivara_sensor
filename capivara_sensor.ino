@@ -20,6 +20,7 @@
 
 // config
 #define SSD1306_NO_SPLASH  // disable display startup art
+#define DISPLAY_I2C_ADDRESS 0x3C  // this address is specific to our display
 //#define DEBUG_IGNORE_WIFI  // useful for testing
 
 // globals
@@ -60,16 +61,26 @@ void task_play_tone(void* params) {
 }
 
 /*
-This task simply encapsulates the call to send an http request, in order to avoid blocking the main loop
-It does not yet return the response
+This task encapsulates the process of sending an http request, in order to avoid blocking the main loop
+It does not yet return any responses
 */
 void task_http_post(void* params) {
   String* hashStr = static_cast<String*>(params);
-  Serial.print("[DEBUG] Hash received in task: ");
+  Serial.print(F("[DEBUG] Hash received in task: "));
   Serial.println(*hashStr);
+
+  http.begin(POST_ADDRESS);
+  http.addHeader("Content-Type", "application/json");
   
-  // maybe this needs to be called on core 0 specifically
-  http.POST("{\"tag_id\":\"" + *hashStr + "\"}"); // this call is blocking 
+  int responseCode = http.POST("{\"tag_id\":\"" + *hashStr + "\"}"); // this call is blocking 
+  String responseData = http.getString();
+
+  http.end();
+
+  Serial.print(F("[DEBUG] Response code: "));
+  Serial.println(responseCode);
+  Serial.print(F("[DEBUG] Response data: "));
+  Serial.println(responseData);
 
   delete hashStr;
   vTaskDelete(NULL);
@@ -108,7 +119,7 @@ void print_display_text(String text, int start_y, int size) {
 /*
 Hashes the tag parameter and sends it over the wifi that is currently connected
 */
-int send_http_post(String tag) {
+void send_http_post(String tag) {
   byte hashResult[32];
   mbedtls_md_context_t hashConfig;
   mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
@@ -121,12 +132,8 @@ int send_http_post(String tag) {
   mbedtls_md_free(&hashConfig);
 
   // send hashed tag
-  Serial.println(F("[INFO ] Sending HTTP POST request"));
+  Serial.println(F("[INFO ] Initializing HTTP POST task"));
 
-  http.begin(POST_ADDRESS);
-  http.addHeader("Content-Type", "application/json");
-
-  //int responseCode = http.POST("{\"tag_id\":\"" + hash_bytes_to_hex_str(hashResult) + "\"}");
   String* hashStrParam = new String(hash_bytes_to_hex_str(hashResult));
   xTaskCreate(
     task_http_post,
@@ -135,11 +142,6 @@ int send_http_post(String tag) {
     hashStrParam,
     1,
     NULL);
-
-  http.end();
-
-  //return responseCode;
-  return 69;
 }
 
 /*
@@ -203,7 +205,7 @@ void setup() {
   player.begin(Serial1, false);
   player.volume(30);  // max volume
 
-  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // this I2C address is specific to our display module
+  display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
   display.clearDisplay();
 
 #ifndef DEBUG_IGNORE_WIFI
@@ -262,20 +264,7 @@ void loop() {
     player.playNext();  //play sound, this call is non-blocking
 
 #ifndef DEBUG_IGNORE_WIFI
-    /*
-    String* tagStrParam = new String(tagStr);
-    xTaskCreate(
-      task_http_post,
-      "HTTP POST task",
-      1000,
-      tagStrParam,
-      1,
-      NULL);
-    */
-    response = send_http_post(tagStr);  // loop gets halted here, should be in a different task
-
-    Serial.print(F("[EVENT] Got response: "));
-    Serial.println(response);
+    send_http_post(tagStr);
 #endif
   }
 }
