@@ -43,21 +43,39 @@ void task_blink_read_led(void* params) {
 }
 
 /*
-This task plays a sound using the buzzer for 200ms and sleeps for 200ms
-It takes one dynamically allocated int as a parameter, which is the amount of times it will repeat the cycle above,
-and takes care of freeing the int
+This task plays a sound using the buzzer
+It takes a dynamically allocated array of 3 ints as a parameter, which specifies the amount of times to repeat,
+the beep time and the sleep time between beeps, in that order. It also frees the array.
 */
 void task_play_tone(void* params) {
-  for (int i = 0; i < *(int*)params; i++) {
+  int* array = static_cast<int*>(params);
+
+  for (int i = 0; i < array[0]; i++) {
     digitalWrite(BUZZER_PIN, HIGH);
-    vTaskDelay(pdMS_TO_TICKS(200));
+    vTaskDelay(pdMS_TO_TICKS(array[1]));
 
     digitalWrite(BUZZER_PIN, LOW);
-    vTaskDelay(pdMS_TO_TICKS(200));
+    vTaskDelay(pdMS_TO_TICKS(array[2]));
   }
 
-  delete static_cast<int*>(params);
+  delete[] array;
   vTaskDelete(NULL);
+}
+
+/*
+Creates a task that loops (count) times. Each loop beeps for (buzzTime)ms and sleeps for (sleepTime)ms.
+Time arguments are optional.
+*/
+void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
+  int* params = new int[3] { count, buzzTime, sleepTime };
+
+  xTaskCreate(
+    task_play_tone,
+    "Buzzer task",
+    1000,
+    params,
+    1,
+    NULL);
 }
 
 /*
@@ -149,14 +167,7 @@ Called when we get assigned an IP at the network we're connecting to
 */
 void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
-  int* param = new int{ 2 };
-  xTaskCreate(
-    task_play_tone,
-    "Buzzer task",
-    1000,
-    param,
-    1,
-    NULL);
+  play_tone(2);
 
   Serial.print(F("[INFO ] Wi-Fi Connected to "));
   Serial.print(SSID);
@@ -171,18 +182,9 @@ Called when the wifi connection is lost or reset
 */
 void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
-  int* param = new int{ 3 };
-  xTaskCreate(
-    task_play_tone,
-    "Buzzer task",
-    1000,
-    param,
-    1,
-    NULL);
+  play_tone(3);
 
   Serial.println(F("[INFO ] Wi-Fi Disconnected!"));
-
-  // todo auto reconnect
 }
 
 void setup() {
@@ -196,7 +198,7 @@ void setup() {
 
   // serial setup
   Serial.begin(115200);             // RX/TX 1 on the board, which actually maps to Serial 0
-  while (!Serial) { delay(100); }   // wait for serial monitor
+  while (!Serial) { delay(100); }   // wait for serial to be ready
   Serial2.begin(RDM6300_BAUDRATE);  // RX/TX 2
   rdm6300.begin(&Serial2);
 
@@ -230,7 +232,6 @@ void setup() {
   } else {
     WiFi.begin(SSID, PASSWORD);  // without cert, wpa2-psk
   }
-  // todo set auto reconnect, so we dont need to reconnect inside on_disconnect manually, and test it
 #endif
 }
 
@@ -243,19 +244,11 @@ void loop() {
       NULL,
       2,
       NULL);
-    int* buzzCountParam = new int{ 1 };
-    xTaskCreate(
-      task_play_tone,
-      "Buzzer task",
-      1000,
-      buzzCountParam,
-      1,
-      NULL);
+    play_tone(1);
 
     uint32_t tag = rdm6300.get_tag_id();
     String tagStr = String(tag, HEX);
     tagStr.toUpperCase();
-    int response;
 
     Serial.print(F("[EVENT] Tag received: "));
     Serial.print(tag);
