@@ -210,15 +210,18 @@ void setup() {
 
 #ifndef DEBUG_IGNORE_WIFI
   // wifi setup
-  WiFi.disconnect(true);  //clean up previous connections
-
-  Serial.print(F("[INFO ] Connecting to "));
-  Serial.println(SSID);
+  WiFi.disconnect(true);  // clean up previous connections
+  WiFi.persistent(false);
+  WiFi.setAutoConnect(false);
+  WiFi.setAutoReconnect(true); // reconnect if connection lost
 
   // registering callbacks
   //WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_CONNECTED);
   WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_GOT_IP);
   WiFi.onEvent(on_wifi_disconnect, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+
+  Serial.print(F("[INFO ] Connecting to "));
+  Serial.println(SSID);
 
   //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
 
