@@ -19,9 +19,10 @@
 #define BUZZER_PIN 12              // active buzzer
 
 // config
-#define SSD1306_NO_SPLASH  // disable display startup art
+#define SSD1306_NO_SPLASH         // disable display startup art
 #define DISPLAY_I2C_ADDRESS 0x3C  // this address is specific to our display
-//#define DEBUG_IGNORE_WIFI  // useful for testing
+#define PLAYER_MAX_VOLUME 30      // volume int 0-30
+//#define DEBUG_IGNORE_WIFI       // useful for testing
 
 // globals
 Rdm6300 rdm6300;
@@ -201,7 +202,7 @@ void setup() {
   // note we are reassigning UART 1 to RX1 = D4, TX1 = D2 on the ESP32
   Serial1.begin(9600, SERIAL_8N1, 4, 2);
   player.begin(Serial1, false);
-  player.volume(30);  // max volume
+  player.volume(PLAYER_MAX_VOLUME);  // max volume
 
   display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
   display.clearDisplay();
