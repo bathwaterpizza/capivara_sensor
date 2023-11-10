@@ -31,14 +31,36 @@ DFPlayerMini_Fast player;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
 /*
-This task blinks the rfid reading indicator LED for 1 second
+This task blinks the rfid reading indicator LED
+It takes one dynamically allocated int as a parameter, which is the blink duration, and frees it
 */
 void task_blink_read_led(void* params) {
+  int* param = static_cast<int*>(params);
+
   digitalWrite(RFID_READ_LED_PIN, HIGH);
 
-  vTaskDelay(pdMS_TO_TICKS(1000));  // local delay
+  vTaskDelay(pdMS_TO_TICKS(*param));
 
   digitalWrite(RFID_READ_LED_PIN, LOW);
+
+  delete param;
+  vTaskDelete(NULL);
+}
+
+/*
+Creates a priority 2 task that blinks the green reading status LED for (blinkTime)ms
+blinkTime is optional and defaults to 1 second
+*/
+void blink_read_led(int blinkTime = 1000) {
+  int* param = new int { blinkTime };
+
+  xTaskCreate(
+    task_blink_read_led,
+    "Read LED task",
+    1000,
+    param,
+    2,
+    NULL);
 }
 
 /*
@@ -58,10 +80,11 @@ void task_play_tone(void* params) {
   }
 
   delete[] array;
+  vTaskDelete(NULL);
 }
 
 /*
-Creates a task that loops (count) times. Each loop beeps for (buzzTime)ms and sleeps for (sleepTime)ms.
+Creates a priority 1 task that loops (count) times. Each loop beeps for (buzzTime)ms and sleeps for (sleepTime)ms.
 Time arguments are optional.
 */
 void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
@@ -77,7 +100,7 @@ void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
 }
 
 /*
-This task encapsulates the process of sending an http request, in order to avoid blocking the main loop
+This task encapsulates the process of sending an http request, avoids blocking the main loop
 It does not yet return any responses
 */
 void task_http_post(void* params) {
@@ -99,6 +122,7 @@ void task_http_post(void* params) {
   Serial.println(responseData);
 
   delete hashStr;
+  vTaskDelete(NULL);
 }
 
 /*
@@ -234,13 +258,7 @@ void setup() {
 
 void loop() {
   if (rdm6300.get_new_tag_id()) {  // true when a new tag shows up in the uart buffer
-    xTaskCreate(                   // create a task to blink the read LED
-      task_blink_read_led,
-      "Read LED task",
-      1000,
-      NULL,
-      2,
-      NULL);
+    blink_read_led();
     play_tone(1);
 
     uint32_t tag = rdm6300.get_tag_id();
