@@ -38,8 +38,6 @@ void task_blink_read_led(void* params) {
   vTaskDelay(pdMS_TO_TICKS(1000));  // local delay
 
   digitalWrite(RFID_READ_LED_PIN, LOW);
-
-  vTaskDelete(NULL);  // delete current task, this might be unnecessary
 }
 
 /*
@@ -59,7 +57,6 @@ void task_play_tone(void* params) {
   }
 
   delete[] array;
-  vTaskDelete(NULL);
 }
 
 /*
@@ -101,7 +98,6 @@ void task_http_post(void* params) {
   Serial.println(responseData);
 
   delete hashStr;
-  vTaskDelete(NULL);
 }
 
 /*
