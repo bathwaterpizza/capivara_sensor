@@ -1,10 +1,9 @@
+// Note: Serial1 is free, can be assigned to GPIO 2, 4
 #include <rdm6300.h>            // rfid reader
 #include <WiFi.h>               // wifi
-#include <HTTPClient.h>         // wifi
+#include <HTTPClient.h>         // http
 #include <esp_wpa2.h>           // esp32 WPA2-E support
 #include <mbedtls/md.h>         // esp32 hashing
-#include <HardwareSerial.h>     // UART serial. note: reassigned Serial1 to GPIO 2, 4
-#include <DFPlayerMini_Fast.h>  // amplifier
 
 // display libs
 #include <SPI.h>
@@ -21,13 +20,11 @@
 // config
 #define SSD1306_NO_SPLASH         // disable display startup art
 #define DISPLAY_I2C_ADDRESS 0x3C  // this address is specific to our display
-#define PLAYER_MAX_VOLUME 30      // volume int 0-30
 //#define DEBUG_IGNORE_WIFI       // useful for testing
 
 // globals
 Rdm6300 rdm6300;
 HTTPClient http;
-DFPlayerMini_Fast player;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
 /*
@@ -223,11 +220,6 @@ void setup() {
   Serial2.begin(RDM6300_BAUDRATE);  // RX/TX 2
   rdm6300.begin(&Serial2);
 
-  // note we are reassigning UART 1 to RX1 = D4, TX1 = D2 on the ESP32
-  Serial1.begin(9600, SERIAL_8N1, 4, 2);
-  player.begin(Serial1, false);
-  player.volume(PLAYER_MAX_VOLUME);  // max volume
-
   display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
   display.clearDisplay();
 
@@ -246,7 +238,7 @@ void setup() {
   Serial.print(F("[INFO ] Connecting to "));
   Serial.println(SSID);
 
-  //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, test_root_ca); // with cert
+  //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, certificate); // with cert
 
   if (WPA2_ENTERPRISE) {
     WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, PASSWORD);  // without cert, wpa2-e
@@ -271,8 +263,6 @@ void loop() {
     Serial.print(tagStr);
     Serial.println(F(")"));
     print_display_text(tagStr, 0, 3);
-
-    player.playNext();  //play sound, this call is non-blocking
 
 #ifndef DEBUG_IGNORE_WIFI
     send_http_post(tagStr);
