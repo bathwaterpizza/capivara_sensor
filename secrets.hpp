@@ -6,6 +6,7 @@ Their definitions should be hidden from git
 #ifndef _NETWORK_SECRETS
 #define _NETWORK_SECRETS
 
+extern const unsigned DEVICE_ID;
 extern const char* POST_ADDRESS;
 extern const bool WPA2_ENTERPRISE;
 

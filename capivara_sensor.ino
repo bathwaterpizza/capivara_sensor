@@ -98,6 +98,7 @@ void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
 
 /*
 This task encapsulates the process of sending an http request, avoids blocking the main loop
+Requires more than 1k memory
 It does not yet return any responses
 */
 void task_http_post(void* params) {
@@ -108,7 +109,12 @@ void task_http_post(void* params) {
   http.begin(POST_ADDRESS);
   http.addHeader("Content-Type", "application/json");
   
-  int responseCode = http.POST("{\"tag_id\":\"" + *hashStr + "\"}"); // this call is blocking 
+  int responseCode = http.POST( // this call is blocking
+    "{\"tag_id\":\"" +
+    *hashStr +
+    "\",\"device_id\":\"" +
+    String(DEVICE_ID) +
+    "\"}");
   String responseData = http.getString();
 
   http.end();
