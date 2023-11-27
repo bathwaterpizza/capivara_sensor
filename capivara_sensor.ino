@@ -112,7 +112,7 @@ void task_http_post(void* params) {
   int responseCode = http.POST( // this call is blocking
     "{\"tag_id\":\"" +
     *hashStr +
-    "\",\"device_id\":\"" +
+    "\",\"classroom_id\":\"" +
     CLASSROOM_ID +
     "\"}");
   String responseData = http.getString();
