@@ -1,9 +1,9 @@
 // Note: Serial1 is free, can be assigned to GPIO 2, 4
-#include <rdm6300.h>            // rfid reader
-#include <WiFi.h>               // wifi
-#include <HTTPClient.h>         // http
-#include <esp_wpa2.h>           // esp32 WPA2-E support
-#include <mbedtls/md.h>         // esp32 hashing
+#include <rdm6300.h>     // rfid reader
+#include <WiFi.h>        // wifi
+#include <HTTPClient.h>  // http
+#include <esp_wpa2.h>    // esp32 WPA2-E support
+#include <mbedtls/md.h>  // esp32 hashing
 
 // display libs
 #include <SPI.h>
@@ -49,7 +49,7 @@ Creates a priority 2 task that blinks the green reading status LED for (blinkTim
 blinkTime is optional and defaults to 1 second
 */
 void blink_read_led(int blinkTime = 1000) {
-  int* param = new int { blinkTime };
+  int* param = new int{ blinkTime };
 
   xTaskCreate(
     task_blink_read_led,
@@ -85,7 +85,7 @@ Creates a priority 1 task that loops (count) times. Each loop beeps for (buzzTim
 Time arguments are optional.
 */
 void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
-  int* params = new int[3] { count, buzzTime, sleepTime };
+  int* params = new int[3]{ count, buzzTime, sleepTime };
 
   xTaskCreate(
     task_play_tone,
@@ -108,13 +108,9 @@ void task_http_post(void* params) {
 
   http.begin(POST_ADDRESS);
   http.addHeader("Content-Type", "application/json");
-  
-  int responseCode = http.POST( // this call is blocking
-    "{\"tag_id\":\"" +
-    *hashStr +
-    "\",\"classroom_id\":\"" +
-    CLASSROOM_ID +
-    "\"}");
+
+  int responseCode = http.POST(  // this call is blocking
+    "{\"tag_id\":\"" + *hashStr + "\",\"classroom_id\":\"" + CLASSROOM_ID + "\"}");
   String responseData = http.getString();
 
   http.end();
@@ -178,12 +174,10 @@ void print_display_idle_info() {
   display.setTextColor(SSD1306_WHITE);
 
   display.setCursor(0, 0);  // Start at top-left corner
-  if (isConnected)
-  {
+  if (isConnected) {
     display.println(WiFi.SSID() + " (" + WiFi.RSSI() + " dBm)");
-  }
-  else {
-    display.println("Wi-Fi sem sinal!");
+  } else {
+    display.println(F("Wi-Fi sem sinal!"));
   }
 
 
@@ -194,16 +188,13 @@ void print_display_idle_info() {
   display.setTextColor(SSD1306_WHITE);
 
   display.setCursor(31, 25);
-  display.println("LEITOR");
-  if (isConnected)
-  {
+  display.println(F("LEITOR"));
+  if (isConnected) {
     display.setCursor(37, 45);
-    display.println("ATIVO");
-  }
-  else
-  {
+    display.println(F("ATIVO"));
+  } else {
     display.setCursor(25, 45);
-    display.println("OFFLINE");
+    display.println(F("OFFLINE"));
   }
 
   display.display();
@@ -218,7 +209,7 @@ void print_display_init_screen() {
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(17, 24);
-  display.println("CAPIVARA");
+  display.println(F("CAPIVARA"));
   display.drawRoundRect(10, 15, 108, 34, 12, SSD1306_WHITE);
 
   display.display();
@@ -291,8 +282,8 @@ void setup() {
   digitalWrite(BUZZER_PIN, LOW);
 
   // serial debug setup
-  Serial.begin(115200);             // RX/TX 1 on the board, which actually maps to Serial 0
-  while (!Serial) { delay(100); }   // wait for serial to be ready
+  Serial.begin(115200);            // RX/TX 1 on the board, which actually maps to Serial 0
+  while (!Serial) { delay(100); }  // wait for serial to be ready
 
   // display setup
   display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
@@ -307,7 +298,7 @@ void setup() {
   WiFi.disconnect(true);  // clean up previous connections
   WiFi.persistent(false);
   WiFi.setAutoConnect(false);
-  WiFi.setAutoReconnect(true); // reconnect if connection lost
+  WiFi.setAutoReconnect(true);  // reconnect if connection lost
 
   // registering callbacks
   //WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_CONNECTED);
@@ -345,8 +336,9 @@ void loop() {
     print_display_idle_info();
 
 #ifndef DEBUG_IGNORE_WIFI
-    if (WiFi.isConnected())
+    if (WiFi.isConnected()) {
       send_http_post(tagStr);
+    }
 #endif
   }
 }
