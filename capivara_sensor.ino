@@ -97,20 +97,21 @@ void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
 }
 
 /*
-This task encapsulates the process of sending an http request and receiving a response
-Requires more than 1k memory
-It does not yet return any responses
+This task encapsulates the process of sending an http request, receiving a response and updating the display
+Requires more than 1k bytes of stack memory to work properly, been using 10k
+Params is a dynamic array of two strings, hashed_tag_id and tag_id
+Here were send "tag_id" and "classroom_id" to the api, and expect to receive the student's first name or empty
 */
 void task_http_post(void* params) {
-  String* hashStr = static_cast<String*>(params);
+  String* paramStr = static_cast<String*>(params);
   Serial.print(F("[DEBUG] Hash received in task: "));
-  Serial.println(*hashStr);
+  Serial.println(paramStr[0]);
 
   http.begin(POST_ADDRESS);
   http.addHeader("Content-Type", "application/json");
 
   int responseCode = http.POST(  // this call is blocking
-    "{\"tag_id\":\"" + *hashStr + "\",\"classroom_id\":\"" + CLASSROOM_ID + "\"}");
+    "{\"tag_id\":\"" + paramStr[0] + "\",\"classroom_id\":\"" + String(CLASSROOM_ID) + "\"}");
   String responseData = http.getString();
 
   http.end();
@@ -120,7 +121,16 @@ void task_http_post(void* params) {
   Serial.print(F("[DEBUG] Response data: "));
   Serial.println(responseData);
 
-  delete hashStr;
+  if (responseCode > 0) // no error
+  {
+    print_display_welcome(paramStr[1], responseData);
+  } else { // error
+    print_display_http_error(paramStr[1]);
+  }
+  vTaskDelay(pdMS_TO_TICKS(1000));
+  print_display_idle_info();
+
+  delete[] paramStr;
   vTaskDelete(NULL);
 }
 
@@ -150,7 +160,7 @@ void print_display_text(String text, int start_y, int size) {
 
   display.setTextSize(size);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, start_y);  // Start at top-left corner
+  display.setCursor(0, start_y);
   display.println(text);
 
   display.display();
@@ -160,10 +170,15 @@ void print_display_welcome(String tag, String firstName) {
   //a
 }
 
+void print_display_http_error(String tag) {
+  //a
+}
+
 /*
 Prints standard information to the display when idle, such as:
 - Wifi connection status
-- current classroom
+- Current classroom
+- Reader status
 */
 void print_display_idle_info() {
   bool isConnected = WiFi.isConnected();
@@ -173,7 +188,7 @@ void print_display_idle_info() {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
 
-  display.setCursor(0, 0);  // Start at top-left corner
+  display.setCursor(0, 0);
   if (isConnected) {
     display.println(WiFi.SSID() + " (" + WiFi.RSSI() + " dBm)");
   } else {
@@ -233,12 +248,12 @@ void send_http_post(String tag) {
   // send hashed tag
   Serial.println(F("[INFO ] Initializing HTTP POST task"));
 
-  String* hashStrParam = new String(hash_bytes_to_hex_str(hashResult));
+  String* tagStrParam = new String[2] { hash_bytes_to_hex_str(hashResult), tag };
   xTaskCreate(
     task_http_post,
     "HTTP POST task",
     10000,
-    hashStrParam,
+    tagStrParam,
     1,
     NULL);
 }
@@ -319,7 +334,7 @@ void setup() {
 }
 
 void loop() {
-  if (rdm6300.get_new_tag_id()) {  // true when a new tag shows up in the uart buffer
+  if (rdm6300.get_new_tag_id()) {  // true when a new tag shows up in the buffer
     blink_read_led();
     play_tone(1);
 
@@ -333,11 +348,11 @@ void loop() {
     Serial.print(tagStr);
     Serial.println(F(")"));
 
-    print_display_idle_info();
-
 #ifndef DEBUG_IGNORE_WIFI
     if (WiFi.isConnected()) {
       send_http_post(tagStr);
+    } else {
+      print_display_idle_info();
     }
 #endif
   }
