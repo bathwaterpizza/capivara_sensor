@@ -160,6 +160,10 @@ void print_display_text(String text, int start_y, int size) {
   display.display();
 }
 
+void print_display_welcome(String tag, String firstName) {
+  //a
+}
+
 /*
 Prints standard information to the display when idle, such as:
 - Wifi connection status
@@ -189,12 +193,18 @@ void print_display_idle_info() {
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
 
-  /*
-  display.setCursor(0, 30);
-  display.println("Aguard");
-  display.setCursor(0, 48);
-  display.println("Carteir..");
-  */
+  display.setCursor(31, 25);
+  display.println("LEITOR");
+  if (isConnected)
+  {
+    display.setCursor(37, 45);
+    display.println("ATIVO");
+  }
+  else
+  {
+    display.setCursor(25, 45);
+    display.println("OFFLINE");
+  }
 
   display.display();
 }
