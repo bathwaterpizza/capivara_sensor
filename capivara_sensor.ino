@@ -103,6 +103,8 @@ Params is a dynamic array of two strings, hashed_tag_id and tag_id
 Here were send "tag_id" and "classroom_id" to the api, and expect to receive the student's first name or empty
 */
 void task_http_post(void* params) {
+  void print_display_idle_info(bool onTagRead = false);
+
   String* paramStr = static_cast<String*>(params);
   Serial.print(F("[DEBUG] Hash received in task: "));
   Serial.println(paramStr[0]);
@@ -121,13 +123,12 @@ void task_http_post(void* params) {
   Serial.print(F("[DEBUG] Response data: "));
   Serial.println(responseData);
 
-  if (responseCode > 0) // no error
-  {
+  if (responseCode > 0) {  // error
     print_display_welcome(paramStr[1], responseData);
-  } else { // error
+  } else {  // error
     print_display_http_error(paramStr[1]);
   }
-  vTaskDelay(pdMS_TO_TICKS(1000));
+  vTaskDelay(pdMS_TO_TICKS(1500));
   print_display_idle_info();
 
   delete[] paramStr;
@@ -166,12 +167,53 @@ void print_display_text(String text, int start_y, int size) {
   display.display();
 }
 
+/*
+Displays the tag ID and a welcome message, which may include the student's name if there was a response,
+Called when the http request succeeds
+*/
 void print_display_welcome(String tag, String firstName) {
-  //a
+  display.clearDisplay();
+
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("Tag: " + tag);
+
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setCursor(0, 20);
+  display.println("Bem-vindo,");
+
+  display.setCursor(0, 40);
+  if (!firstName.isEmpty()) {
+    display.println(firstName);
+  } else {
+    display.println("Aluno");
+  }
+
+  display.display();
 }
 
+/*
+Displays the tag ID and an error message,
+Called when the http request fails
+*/
 void print_display_http_error(String tag) {
-  //a
+  display.clearDisplay();
+
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println("Tag: " + tag);
+
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setCursor(0, 30);
+  display.println("Erro HTTP!");
+
+  display.display();
 }
 
 /*
@@ -180,7 +222,7 @@ Prints standard information to the display when idle, such as:
 - Current classroom
 - Reader status
 */
-void print_display_idle_info() {
+void print_display_idle_info(bool onTagRead = false) {
   bool isConnected = WiFi.isConnected();
 
   display.clearDisplay();
@@ -202,14 +244,20 @@ void print_display_idle_info() {
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
 
-  display.setCursor(31, 25);
-  display.println(F("LEITOR"));
-  if (isConnected) {
-    display.setCursor(37, 45);
-    display.println(F("ATIVO"));
+  if (onTagRead) {
+    display.setCursor(11, 33);
+    display.println(F("AGUARDE.."));
   } else {
-    display.setCursor(25, 45);
-    display.println(F("OFFLINE"));
+    display.setCursor(31, 25);
+    display.println(F("LEITOR"));
+
+    if (isConnected) {
+      display.setCursor(37, 45);
+      display.println(F("ATIVO"));
+    } else {
+      display.setCursor(25, 45);
+      display.println(F("OFFLINE"));
+    }
   }
 
   display.display();
@@ -248,7 +296,7 @@ void send_http_post(String tag) {
   // send hashed tag
   Serial.println(F("[INFO ] Initializing HTTP POST task"));
 
-  String* tagStrParam = new String[2] { hash_bytes_to_hex_str(hashResult), tag };
+  String* tagStrParam = new String[2]{ hash_bytes_to_hex_str(hashResult), tag };
   xTaskCreate(
     task_http_post,
     "HTTP POST task",
@@ -350,6 +398,7 @@ void loop() {
 
 #ifndef DEBUG_IGNORE_WIFI
     if (WiFi.isConnected()) {
+      print_display_idle_info(true);
       send_http_post(tagStr);
     } else {
       print_display_idle_info();
