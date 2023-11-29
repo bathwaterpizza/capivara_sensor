@@ -97,7 +97,7 @@ void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
 }
 
 /*
-This task encapsulates the process of sending an http request, avoids blocking the main loop
+This task encapsulates the process of sending an http request and receiving a response
 Requires more than 1k memory
 It does not yet return any responses
 */
@@ -151,10 +151,66 @@ given a size and the starting height
 */
 void print_display_text(String text, int start_y, int size) {
   display.clearDisplay();
+
   display.setTextSize(size);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, start_y);  // Start at top-left corner
-  display.println(text.c_str());
+  display.println(text);
+
+  display.display();
+}
+
+/*
+Prints standard information to the display when idle, such as:
+- Wifi connection status
+- current classroom
+*/
+void print_display_idle_info() {
+  bool isConnected = WiFi.isConnected();
+
+  display.clearDisplay();
+
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
+  display.setCursor(0, 0);  // Start at top-left corner
+  if (isConnected)
+  {
+    display.println(WiFi.SSID() + " (" + WiFi.RSSI() + " dBm)");
+  }
+  else {
+    display.println("Wi-Fi sem sinal!");
+  }
+
+
+  display.setCursor(0, 9);
+  display.println("Sala " + String(CLASSROOM_ID));
+
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+
+  /*
+  display.setCursor(0, 30);
+  display.println("Aguard");
+  display.setCursor(0, 48);
+  display.println("Carteir..");
+  */
+
+  display.display();
+}
+
+/*
+Prints the project name to the display while the device is initializing
+*/
+void print_display_init_screen() {
+  display.clearDisplay();
+
+  display.setTextSize(2);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(17, 24);
+  display.println("CAPIVARA");
+  display.drawRoundRect(10, 15, 108, 34, 12, SSD1306_WHITE);
+
   display.display();
 }
 
@@ -199,6 +255,8 @@ void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   Serial.print(WiFi.localIP());
   Serial.print(F(" | MAC: "));
   Serial.println(WiFi.macAddress());
+
+  print_display_idle_info();
 }
 
 /*
@@ -209,6 +267,8 @@ void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
   play_tone(3);
 
   Serial.println(F("[INFO ] Wi-Fi Disconnected!"));
+
+  print_display_idle_info();
 }
 
 void setup() {
@@ -220,14 +280,17 @@ void setup() {
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
   digitalWrite(BUZZER_PIN, LOW);
 
-  // serial setup
+  // serial debug setup
   Serial.begin(115200);             // RX/TX 1 on the board, which actually maps to Serial 0
   while (!Serial) { delay(100); }   // wait for serial to be ready
+
+  // display setup
+  display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
+  print_display_init_screen();
+
+  // serial tag reader setup
   Serial2.begin(RDM6300_BAUDRATE);  // RX/TX 2
   rdm6300.begin(&Serial2);
-
-  display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
-  display.clearDisplay();
 
 #ifndef DEBUG_IGNORE_WIFI
   // wifi setup
@@ -268,10 +331,12 @@ void loop() {
     Serial.print(F(" (0x"));
     Serial.print(tagStr);
     Serial.println(F(")"));
-    print_display_text(tagStr, 0, 3);
+
+    print_display_idle_info();
 
 #ifndef DEBUG_IGNORE_WIFI
-    send_http_post(tagStr);
+    if (WiFi.isConnected())
+      send_http_post(tagStr);
 #endif
   }
 }
