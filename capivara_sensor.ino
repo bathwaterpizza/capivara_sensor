@@ -353,7 +353,8 @@ void setup() {
   print_display_init_screen();
 
   // serial tag reader setup
-  Serial2.begin(RDM6300_BAUDRATE);  // RX/TX 2
+  //Serial2.begin(RDM6300_BAUDRATE);  // RX/TX 2
+  Serial2.begin(RDM6300_BAUDRATE, SERIAL_8N1, 19, 22);  // RX/TX 2
   rdm6300.begin(&Serial2);
 
 #ifndef DEBUG_IGNORE_WIFI
