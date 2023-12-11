@@ -183,11 +183,11 @@ void print_display_welcome(String tag, String firstName) {
   display.setTextColor(SSD1306_WHITE);
 
   display.setCursor(0, 20);
-  display.println("Bem-vindo,");
+  display.println("Oi,");
 
   display.setCursor(0, 40);
   if (!firstName.isEmpty()) {
-    display.println(firstName);
+    display.println(firstName + "!");
   } else {
     display.println("Aluno");
   }
