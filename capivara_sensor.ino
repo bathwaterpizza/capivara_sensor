@@ -369,6 +369,9 @@ void setup() {
   WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_GOT_IP);
   WiFi.onEvent(on_wifi_disconnect, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
+  WiFi.mode(WIFI_AP_STA); // act as both client and hotspot
+  WiFi.softAP(AP_SSID, AP_PASSWORD); // hotspot settings
+
   Serial.print(F("[INFO ] Connecting to "));
   Serial.println(SSID);
 
