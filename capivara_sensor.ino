@@ -33,15 +33,19 @@ const char webpage[] PROGMEM = R"html(
 <!DOCTYPE HTML>
 <html>
 <head>
-  <title>ESP32 Web Server</title>
+  <title>CAPIVARA</title>
   <style>
     body {
-      background-color: blue;
+      background-color: navy;
+    }
+    h1 {
+      text-align: center;
+      color: white;
     }
   </style>
 </head>
 <body>
-  <h1>Hello from the ESP32</h1>
+  <h1>CAPIVARA System - Node configuration</h1>
 </body>
 </html>
 )html";
