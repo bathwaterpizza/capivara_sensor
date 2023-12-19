@@ -1,9 +1,11 @@
 // Note: Serial1 is free, can be assigned to GPIO 2, 4
-#include <rdm6300.h>     // rfid reader
-#include <WiFi.h>        // wifi
-#include <HTTPClient.h>  // http
-#include <esp_wpa2.h>    // esp32 WPA2-E support
-#include <mbedtls/md.h>  // esp32 hashing
+#include <rdm6300.h>           // rfid reader
+#include <WiFi.h>              // wifi
+#include <HTTPClient.h>        // http
+#include <AsyncTCP.h>          // dependency for web server
+#include <ESPAsyncWebSrv.h>    // esp32 web server
+#include <esp_wpa2.h>          // esp32 WPA2-E support
+#include <mbedtls/md.h>        // esp32 hashing
 
 // display libs
 #include <SPI.h>
@@ -24,8 +26,25 @@
 
 // globals
 Rdm6300 rdm6300;
-HTTPClient http;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
+HTTPClient http;
+AsyncWebServer server(80);
+const char webpage[] PROGMEM = R"html(
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>ESP32 Web Server</title>
+  <style>
+    body {
+      background-color: blue;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hello from the ESP32</h1>
+</body>
+</html>
+)html";
 
 /*
 This task blinks the rfid reading indicator LED
@@ -313,7 +332,7 @@ void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
   play_tone(2);
 
-  Serial.print(F("[INFO ] Wi-Fi Connected to "));
+  Serial.print(F("[INFO ] Wi-Fi STA Connected to "));
   Serial.print(SSID);
   Serial.print(F("! IP: "));
   Serial.print(WiFi.localIP());
@@ -330,7 +349,7 @@ void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
   play_tone(3);
 
-  Serial.println(F("[INFO ] Wi-Fi Disconnected!"));
+  Serial.println(F("[INFO ] Wi-Fi STA Disconnected!"));
 
   print_display_idle_info();
 }
@@ -347,6 +366,8 @@ void setup() {
   // serial debug setup
   Serial.begin(115200);            // RX/TX 1 on the board, which actually maps to Serial 0
   while (!Serial) { delay(100); }  // wait for serial to be ready
+
+  delay(1000); // wait a little bit more..
 
   // display setup
   display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
@@ -374,15 +395,15 @@ void setup() {
 
   WiFi.mode(WIFI_AP_STA); // act as both client and hotspot
   WiFi.softAP(AP_SSID, AP_PASSWORD); // hotspot settings
+  IPAddress defaultIP(192, 168, 1, 1);
+  IPAddress subnetMask(255, 255, 255, 0);
+  WiFi.softAPConfig(defaultIP, defaultIP, subnetMask);
 
   Serial.print(F("[INFO ] AP IP is "));
   Serial.println(WiFi.softAPIP());
 
-  Serial.print(F("[INFO ] Connecting to "));
+  Serial.print(F("[INFO ] STA Connecting to "));
   Serial.println(SSID);
-
-  // this could be enough, but check out eps async web server too
-  // https://randomnerdtutorials.com/esp32-access-point-ap-web-server/
 
   //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, certificate); // with cert
 
@@ -391,6 +412,13 @@ void setup() {
   } else {
     WiFi.begin(SSID, PASSWORD);  // without cert, wpa2-psk
   }
+
+  // AP server setup
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", webpage);
+  });
+
+  server.begin();
 #endif
 }
 
