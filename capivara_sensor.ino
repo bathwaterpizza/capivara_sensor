@@ -369,14 +369,20 @@ void setup() {
   WiFi.onEvent(on_wifi_connect, ARDUINO_EVENT_WIFI_STA_GOT_IP);
   WiFi.onEvent(on_wifi_disconnect, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
 
-  Serial.print(F("[INFO ] Setting up hotspot with SSID "));
+  Serial.print(F("[INFO ] Setting up AP with SSID "));
   Serial.println(AP_SSID);
 
   WiFi.mode(WIFI_AP_STA); // act as both client and hotspot
   WiFi.softAP(AP_SSID, AP_PASSWORD); // hotspot settings
 
+  Serial.print(F("[INFO ] AP IP is "));
+  Serial.println(WiFi.softAPIP());
+
   Serial.print(F("[INFO ] Connecting to "));
   Serial.println(SSID);
+
+  // this could be enough, but check out eps async web server too
+  // https://randomnerdtutorials.com/esp32-access-point-ap-web-server/
 
   //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, certificate); // with cert
 
