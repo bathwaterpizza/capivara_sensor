@@ -46,6 +46,16 @@ const char webpage[] PROGMEM = R"html(
 </head>
 <body>
   <h1>CAPIVARA System - Node configuration</h1>
+  <h2>Write new Wi-Fi network<h2>
+  <form action="/submit" method="POST">
+    <label for="new_ssid">SSID: </label><br>
+    <input type="text" id="inputData" name="new_ssid"><br><br>
+    <label for="new_pwd">Pass: </label><br>
+    <input type="text" id="inputData" name="new_pass"><br><br>
+    <input type="submit" value="Submit">
+  </form>
+  <h2>Set new CLASSROOM_ID</h2>
+  <!-- input box here -->
 </body>
 </html>
 )html";
