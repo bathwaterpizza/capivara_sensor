@@ -30,33 +30,70 @@ Rdm6300 rdm6300;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 HTTPClient http;
 AsyncWebServer server(80);
+
+// this is the config webpage for the AP
 const char webpage[] PROGMEM = R"html(
 <!DOCTYPE HTML>
 <html>
 <head>
   <title>CAPIVARA</title>
   <style>
-    body {
-      background-color: navy;
-    }
-    h1 {
-      text-align: center;
-      color: white;
-    }
+    body, html {
+			height: 100%;
+			margin: 0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			background-color: navy;
+		}
+
+		.container {
+			text-align: center;
+		}
+
+		.centered-form {
+			display: inline-block;
+		}
+
+		h1, label {
+			color: white;
+		}
+
+		input[type="submit"] {
+			font-size: 50px;
+		}
   </style>
 </head>
 <body>
-  <h1>CAPIVARA System - Node configuration</h1>
-  <h2>Write new Wi-Fi network<h2>
-  <form action="/submit" method="POST">
-    <label for="new_ssid">SSID: </label><br>
-    <input type="text" id="inputData" name="new_ssid"><br><br>
-    <label for="new_pwd">Pass: </label><br>
-    <input type="text" id="inputData" name="new_pass"><br><br>
-    <input type="submit" value="Submit">
-  </form>
-  <h2>Set new CLASSROOM_ID</h2>
-  <!-- input box here -->
+	<div class="container">
+		<h1>Set Wi-Fi for internet connection</h1>
+
+		<form action="/setwifi" method="POST" class="centered-form">
+			<input type="radio" id="i1" name="wifi" value="wifi_digrad">
+			<label for="i1">DI-GRAD</label><br><br>
+
+			<input type="radio" id="i2"name="wifi" value="wifi_puc">
+			<label for="i2">Wi-Fi PUC</label><br><br>
+
+			<input type="radio" id="i3" name="wifi" value="wifi_lieng">
+			<label for="i3">LIENG</label><br><br>
+
+			<input type="radio" id="i4" name="wifi" value="wifi_redmi">
+			<label for="i4">Redmi 9A</label><br><br>
+
+			<br><input type="submit" value="Save">
+		</form>
+
+		<br><br><br>
+		<h1>Set current classroom</h1>
+
+		<form action="/setclassroom" method="POST" class="centered-form">
+			<label for="classroomid">CLASSROOM_ID:</label><br>
+			<input type="text" id="classroomid" name="classroom_id"><br><br>
+
+			<br><input type="submit" value="Save">
+		</form>
+	</div>
 </body>
 </html>
 )html";
