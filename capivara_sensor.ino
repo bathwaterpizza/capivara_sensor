@@ -1,11 +1,11 @@
 // Note: Serial1 is free, can be assigned to GPIO 2, 4
-#include <rdm6300.h>           // rfid reader
-#include <WiFi.h>              // wifi
-#include <HTTPClient.h>        // http
-#include <AsyncTCP.h>          // dependency for web server
-#include <ESPAsyncWebSrv.h>    // esp32 web server
-#include <esp_wpa2.h>          // esp32 WPA2-E support
-#include <mbedtls/md.h>        // esp32 hashing
+#include <rdm6300.h>         // rfid reader
+#include <WiFi.h>            // wifi
+#include <HTTPClient.h>      // http
+#include <AsyncTCP.h>        // dependency for web server
+#include <ESPAsyncWebSrv.h>  // esp32 web server
+#include <esp_wpa2.h>        // esp32 WPA2-E support
+#include <mbedtls/md.h>      // esp32 hashing
 
 // display libs
 #include <SPI.h>
@@ -25,6 +25,7 @@
 //#define DEBUG_IGNORE_WIFI       // useful for testing
 
 // globals
+bool stopDisconnectBeep = false;  // this is not a config var, do not change
 Rdm6300 rdm6300;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 HTTPClient http;
@@ -344,6 +345,7 @@ Called when we get assigned an IP at the network we're connecting to
 */
 void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
+  stopDisconnectBeep = false;
   play_tone(2);
 
   Serial.print(F("[INFO ] Wi-Fi STA Connected to "));
@@ -361,7 +363,10 @@ Called when the wifi connection is lost or reset
 */
 void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
   digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
-  play_tone(3);
+  if (!stopDisconnectBeep) {
+    stopDisconnectBeep = true;
+    play_tone(3);
+  }
 
   Serial.println(F("[INFO ] Wi-Fi STA Disconnected!"));
 
@@ -381,7 +386,7 @@ void setup() {
   Serial.begin(115200);            // RX/TX 1 on the board, which actually maps to Serial 0
   while (!Serial) { delay(100); }  // wait for serial to be ready
 
-  delay(1000); // wait a little bit more..
+  delay(1000);  // wait a little bit more..
 
   // display setup
   display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
@@ -407,8 +412,8 @@ void setup() {
   Serial.print(F("[INFO ] Setting up AP with SSID "));
   Serial.println(AP_SSID);
 
-  WiFi.mode(WIFI_AP_STA); // act as both client and hotspot
-  WiFi.softAP(AP_SSID, AP_PASSWORD); // hotspot settings
+  WiFi.mode(WIFI_AP_STA);             // act as both client and hotspot
+  WiFi.softAP(AP_SSID, AP_PASSWORD);  // hotspot settings
   IPAddress defaultIP(192, 168, 1, 1);
   IPAddress subnetMask(255, 255, 255, 0);
   WiFi.softAPConfig(defaultIP, defaultIP, subnetMask);
@@ -428,7 +433,7 @@ void setup() {
   }
 
   // AP server setup
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send_P(200, "text/html", webpage);
   });
 
