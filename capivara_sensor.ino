@@ -270,54 +270,9 @@ void setup() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send_P(200, "text/html", webpage);
   });
-
-  server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request){
-    String dataReceived;
-
-    if (request->hasParam("wifi", true)) {
-      play_tone_blocking(2, 50, 150);
-
-      dataReceived = request->getParam("wifi", true)->value();
-      int index = dataReceived.toInt();
-      auto credentials = WIFI_LIST[index];
-      Serial.print("[DEBUG] Got Wi-Fi choice from webpage: ");
-      Serial.println(dataReceived);
-      
-      prefs.begin("config");
-
-      prefs.putString("ssid", credentials.ssid);
-      prefs.putString("password", credentials.password);
-      prefs.putString("eap", credentials.eap);
-      prefs.putBool("isEnterprise", credentials.enterprise);
-
-      prefs.end();
-    }
-
-    request->send(200);
-    ESP.restart();
-  });
-
-  server.on("/setclassroom", HTTP_POST, [](AsyncWebServerRequest *request){
-    String dataReceived;
-
-    if (request->hasParam("classroom_id", true)) {
-      play_tone_blocking(2, 50, 150);
-
-      dataReceived = request->getParam("classroom_id", true)->value();
-      Serial.print("[DEBUG] Got CLASSROOM_ID choice from webpage: ");
-      Serial.println(dataReceived);
-
-      prefs.begin("config");
-
-      prefs.putString("classroom", dataReceived);
-
-      prefs.end();
-    }
-
-    request->send(200);  	
-    ESP.restart();
-  });
-
+  server.on("/setwifi", HTTP_POST, on_route_setwifi);
+  server.on("/setclassroom", HTTP_POST, on_route_setclassroom);
+  
   server.begin();
 #endif
 }
