@@ -1,6 +1,6 @@
 #include "events.hpp"
-#include <Preferences.h>     // flash storage
-#include <ESP.h>             // esp32 software reboot
+#include <Preferences.h>  // flash storage
+#include <ESP.h>          // esp32 software reboot
 #include "globals.hpp"
 #include "util.hpp"
 #include "display.hpp"
@@ -57,7 +57,7 @@ void on_route_setwifi(AsyncWebServerRequest *request) {
     auto credentials = WIFI_LIST[index];
     Serial.print("[DEBUG] Got Wi-Fi choice from webpage: ");
     Serial.println(dataReceived);
-    
+
     prefs.begin("config");
 
     prefs.putString("ssid", credentials.ssid);
@@ -92,6 +92,6 @@ void on_route_setclassroom(AsyncWebServerRequest *request) {
     prefs.end();
   }
 
-  request->send(200);  	
+  request->send(200);
   ESP.restart();
 }

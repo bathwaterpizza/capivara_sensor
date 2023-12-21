@@ -20,11 +20,11 @@ typedef struct wifi_creds_struct WiFiCredentials;
 
 extern const WiFiCredentials WIFI_LIST[WIFI_LIST_SIZE];
 
-extern const char* CLASSROOM_ID;     // classroom name, e.g. "L540"
-extern const char* POST_ADDRESS;     // URL for the HTTP POST request
-extern const char* AP_SSID;          // name of wifi access point for configuration
-extern const char* AP_PASSWORD;      // password
-extern const bool WPA2_ENTERPRISE;   // true if connecting to a WPA2-E network
+extern const char* CLASSROOM_ID;    // classroom name, e.g. "L540"
+extern const char* POST_ADDRESS;    // URL for the HTTP POST request
+extern const char* AP_SSID;         // name of wifi access point for configuration
+extern const char* AP_PASSWORD;     // password
+extern const bool WPA2_ENTERPRISE;  // true if connecting to a WPA2-E network
 
 extern const char* EAP_ANONYMOUS_IDENTITY;
 extern const char* EAP_IDENTITY;
