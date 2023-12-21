@@ -17,23 +17,14 @@
 
 // constants
 #include "secrets.hpp"
-#define RFID_READ_LED_PIN 5        // green led
-#define WIFI_CONNECTED_LED_PIN 13  // blue led
-#define BUZZER_PIN 12              // active buzzer
+#include "util.hpp"
+#include "globals.hpp"
+#include "events.hpp"
+#include "display.hpp"
 
 // config
-#define SSD1306_NO_SPLASH         // disable display startup art
-#define DISPLAY_I2C_ADDRESS 0x3C  // this address is specific to our display
 //#define DEBUG_IGNORE_WIFI       // useful for testing
 //#define OVERWRITE_ON_BOOT       // overwrite preferences stored on flash with hardcoded values
-
-// globals
-bool stopDisconnectBeep = false;  // this is not a config var, do not change
-Rdm6300 rdm6300;
-Adafruit_SSD1306 display(128, 64, &Wire, -1);
-HTTPClient http;
-AsyncWebServer server(80);
-Preferences prefs;
 
 // this is the config webpage for the AP
 const char webpage[] PROGMEM = R"html(
@@ -61,14 +52,19 @@ const char webpage[] PROGMEM = R"html(
 
 		h1, label {
 			color: white;
-		}
-
-		label {
-			font-size: 3vh;
+			font-size: 3vw;
+			max-width: 100%;
 		}
 
 		input[type="submit"] {
-			font-size: 4vh;
+			font-size: 3vw;
+			max-width: 100%;
+		}
+
+		input[type="text"] {
+			font-size: 3vw;
+			max-width: 100%;
+			margin: 1vw;
 		}
   </style>
 </head>
@@ -96,7 +92,7 @@ const char webpage[] PROGMEM = R"html(
 		<h1>Set current classroom</h1>
 
 		<form action="/setclassroom" method="POST" class="centered-form">
-			<label for="classroomid">CLASSROOM_ID:</label><br>
+			<label for="classroomid">CLASSROOM_ID</label><br>
 			<input type="text" id="classroomid" name="classroom_id"><br><br>
 
 			<br><input type="submit" value="Save and reboot">
@@ -105,88 +101,6 @@ const char webpage[] PROGMEM = R"html(
 </body>
 </html>
 )html";
-
-/*
-This task blinks the rfid reading indicator LED
-It takes one dynamically allocated int as a parameter, which is the blink duration, and frees it
-*/
-void task_blink_read_led(void* params) {
-  int* param = static_cast<int*>(params);
-
-  digitalWrite(RFID_READ_LED_PIN, HIGH);
-
-  vTaskDelay(pdMS_TO_TICKS(*param));
-
-  digitalWrite(RFID_READ_LED_PIN, LOW);
-
-  delete param;
-  vTaskDelete(NULL);
-}
-
-/*
-Creates a priority 2 task that blinks the green reading status LED for (blinkTime)ms
-blinkTime is optional and defaults to 1 second
-*/
-void blink_read_led(int blinkTime = 1000) {
-  int* param = new int{ blinkTime };
-
-  xTaskCreate(
-    task_blink_read_led,
-    "Read LED task",
-    1000,
-    param,
-    2,
-    NULL);
-}
-
-/*
-This task plays a sound using the buzzer
-It takes a dynamically allocated array of 3 ints as a parameter, which specifies the amount of times to repeat,
-the beep time and the sleep time between beeps, in that order. It also frees the array.
-*/
-void task_play_tone(void* params) {
-  int* array = static_cast<int*>(params);
-
-  for (int i = 0; i < array[0]; i++) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    vTaskDelay(pdMS_TO_TICKS(array[1]));
-
-    digitalWrite(BUZZER_PIN, LOW);
-    vTaskDelay(pdMS_TO_TICKS(array[2]));
-  }
-
-  delete[] array;
-  vTaskDelete(NULL);
-}
-
-/*
-Creates a priority 1 task that loops (count) times. Each loop beeps for (buzzTime)ms and sleeps for (sleepTime)ms.
-Time arguments are optional.
-*/
-void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
-  int* params = new int[3]{ count, buzzTime, sleepTime };
-
-  xTaskCreate(
-    task_play_tone,
-    "Buzzer task",
-    1000,
-    params,
-    1,
-    NULL);
-}
-
-/*
-Synchronous version of play_tone
-*/
-void play_tone_blocking(int count, int buzzTime = 200, int sleepTime = 200) {
-  for (int i = 0; i < count; i++) {
-    digitalWrite(BUZZER_PIN, HIGH);
-    delay(buzzTime);
-
-    digitalWrite(BUZZER_PIN, LOW);
-    delay(sleepTime);
-  }
-}
 
 /*
 This task encapsulates the process of sending an http request, receiving a response and updating the display
@@ -248,134 +162,6 @@ String hash_bytes_to_hex_str(byte* hash) {
 }
 
 /*
-Wrapping some functionality from the display library to print text to our display,
-given a size and the starting height
-*/
-void print_display_text(String text, int start_y, int size) {
-  display.clearDisplay();
-
-  display.setTextSize(size);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, start_y);
-  display.println(text);
-
-  display.display();
-}
-
-/*
-Displays the tag ID and a welcome message, which may include the student's name if there was a response,
-Called when the http request succeeds
-*/
-void print_display_welcome(String tag, String firstName) {
-  display.clearDisplay();
-
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println("Tag: " + tag);
-
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-
-  display.setCursor(0, 20);
-  display.println("Oi,");
-
-  display.setCursor(0, 40);
-  if (!firstName.isEmpty()) {
-    display.println(firstName + "!");
-  } else {
-    display.println("Aluno");
-  }
-
-  display.display();
-}
-
-/*
-Displays the tag ID and an error message,
-Called when the http request fails
-*/
-void print_display_http_error(String tag) {
-  display.clearDisplay();
-
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-  display.println("Tag: " + tag);
-
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-
-  display.setCursor(0, 30);
-  display.println("Erro HTTP!");
-
-  display.display();
-}
-
-/*
-Prints standard information to the display when idle, such as:
-- Wifi connection status
-- Current classroom
-- Reader status
-*/
-void print_display_idle_info(bool onTagRead = false) {
-  bool isConnected = WiFi.isConnected();
-
-  display.clearDisplay();
-
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-
-  display.setCursor(0, 0);
-  if (isConnected) {
-    display.println(WiFi.SSID() + " (" + WiFi.RSSI() + " dBm)");
-  } else {
-    display.println(F("Wi-Fi sem sinal!"));
-  }
-
-  prefs.begin("config");
-
-  display.setCursor(0, 9);
-  display.println("Sala " + prefs.getString("classroom", "KEY NOT FOUND"));
-
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-
-  if (onTagRead) {
-    display.setCursor(11, 33);
-    display.println(F("AGUARDE.."));
-  } else {
-    display.setCursor(31, 25);
-    display.println(F("LEITOR"));
-
-    if (isConnected) {
-      display.setCursor(37, 45);
-      display.println(F("ATIVO"));
-    } else {
-      display.setCursor(25, 45);
-      display.println(F("OFFLINE"));
-    }
-  }
-
-  display.display();
-  prefs.end();
-}
-
-/*
-Prints the project name to the display while the device is initializing
-*/
-void print_display_init_screen() {
-  display.clearDisplay();
-
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(17, 24);
-  display.println(F("CAPIVARA"));
-  display.drawRoundRect(10, 15, 108, 34, 12, SSD1306_WHITE);
-
-  display.display();
-}
-
-/*
 Hashes the tag parameter and sends it over the wifi that is currently connected
 */
 void send_http_post(String tag) {
@@ -401,42 +187,6 @@ void send_http_post(String tag) {
     tagStrParam,
     1,
     NULL);
-}
-
-/*
-Called when we get assigned an IP at the network we're connecting to
-*/
-void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
-  digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
-  stopDisconnectBeep = false;
-  play_tone(2);
-
-  prefs.begin("config");
-
-  Serial.print(F("[INFO ] Wi-Fi STA Connected to "));
-  Serial.print(prefs.getString("ssid", "KEY NOT FOUND"));
-  Serial.print(F("! IP: "));
-  Serial.print(WiFi.localIP());
-  Serial.print(F(" | MAC: "));
-  Serial.println(WiFi.macAddress());
-
-  print_display_idle_info();
-  prefs.end();
-}
-
-/*
-Called when the wifi connection is lost or reset
-*/
-void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
-  digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
-  if (!stopDisconnectBeep) {
-    stopDisconnectBeep = true;
-    play_tone(3);
-  }
-
-  Serial.println(F("[INFO ] Wi-Fi STA Disconnected!"));
-
-  print_display_idle_info();
 }
 
 void setup() {
@@ -525,7 +275,7 @@ void setup() {
     String dataReceived;
 
     if (request->hasParam("wifi", true)) {
-      play_tone_blocking(3, 50, 100);
+      play_tone_blocking(2, 50, 150);
 
       dataReceived = request->getParam("wifi", true)->value();
       int index = dataReceived.toInt();
@@ -551,7 +301,7 @@ void setup() {
     String dataReceived;
 
     if (request->hasParam("classroom_id", true)) {
-      play_tone_blocking(3, 50, 100);
+      play_tone_blocking(2, 50, 150);
 
       dataReceived = request->getParam("classroom_id", true)->value();
       Serial.print("[DEBUG] Got CLASSROOM_ID choice from webpage: ");

@@ -5,8 +5,8 @@ Their definitions should be hidden from git
 You must define OVERWRITE_ON_BOOT in order to save these to flash preferences
 */
 
-#ifndef _NETWORK_SECRETS
-#define _NETWORK_SECRETS
+#pragma once
+
 #define WIFI_LIST_SIZE 4
 
 // this is used to provide the wifi options available on the config webpage
@@ -31,5 +31,3 @@ extern const char* EAP_IDENTITY;
 extern const char* EAP_USERNAME;
 extern const char* SSID;
 extern const char* PASSWORD;
-
-#endif
