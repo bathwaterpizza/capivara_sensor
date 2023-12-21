@@ -25,7 +25,7 @@
 #define SSD1306_NO_SPLASH         // disable display startup art
 #define DISPLAY_I2C_ADDRESS 0x3C  // this address is specific to our display
 //#define DEBUG_IGNORE_WIFI       // useful for testing
-#define OVERWRITE_ON_BOOT       // overwrite preferences stored on flash with hardcoded values
+//#define OVERWRITE_ON_BOOT       // overwrite preferences stored on flash with hardcoded values
 
 // globals
 bool stopDisconnectBeep = false;  // this is not a config var, do not change
@@ -530,7 +530,7 @@ void setup() {
       dataReceived = request->getParam("classroom_id", true)->value();
       Serial.print("[DEBUG] Got CLASSROOM_ID choice from webpage: ");
       Serial.println(dataReceived);
-      
+
       prefs.begin("config");
       prefs.putString("classroom", dataReceived);
       prefs.end();
