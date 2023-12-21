@@ -77,16 +77,16 @@ const char webpage[] PROGMEM = R"html(
 		<h1>Set Wi-Fi for internet connection</h1>
 
 		<form action="/setwifi" method="POST" class="centered-form">
-			<input type="radio" id="i1" name="wifi" value="wifi_digrad">
+			<input type="radio" id="i1" name="wifi" value="0">
 			<label for="i1">DI-GRAD</label><br><br>
 
-			<input type="radio" id="i2"name="wifi" value="wifi_puc">
+			<input type="radio" id="i2" name="wifi" value="1">
 			<label for="i2">Wi-Fi PUC</label><br><br>
 
-			<input type="radio" id="i3" name="wifi" value="wifi_lieng">
+			<input type="radio" id="i3" name="wifi" value="2">
 			<label for="i3">LIENG</label><br><br>
 
-			<input type="radio" id="i4" name="wifi" value="wifi_redmi">
+			<input type="radio" id="i4" name="wifi" value="3">
 			<label for="i4">Redmi 9A</label><br><br>
 
 			<br><input type="submit" value="Save and reboot">
@@ -176,6 +176,19 @@ void play_tone(int count, int buzzTime = 200, int sleepTime = 200) {
 }
 
 /*
+Synchronous version of play_tone
+*/
+void play_tone_blocking(int count, int buzzTime = 200, int sleepTime = 200) {
+  for (int i = 0; i < count; i++) {
+    digitalWrite(BUZZER_PIN, HIGH);
+    vTaskDelay(pdMS_TO_TICKS(buzzTime));
+
+    digitalWrite(BUZZER_PIN, LOW);
+    vTaskDelay(pdMS_TO_TICKS(sleepTime)));
+  }
+}
+
+/*
 This task encapsulates the process of sending an http request, receiving a response and updating the display
 Requires more than 1k bytes of stack memory to work properly, been using 10k
 Params is a dynamic array of two strings, hashed_tag_id and tag_id
@@ -205,7 +218,7 @@ void task_http_post(void* params) {
   Serial.print(F("[DEBUG] Response data: "));
   Serial.println(responseData);
 
-  if (responseCode > 0) {  // error
+  if (responseCode > 0) { 
     print_display_welcome(paramStr[1], responseData);
   } else {  // error
     print_display_http_error(paramStr[1]);
@@ -511,12 +524,23 @@ void setup() {
   server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request){
     String dataReceived;
 
-    if(request->hasParam("wifi", true)) {
+    if (request->hasParam("wifi", true)) {
+      play_tone(3, 50, 100);
+
       dataReceived = request->getParam("wifi", true)->value();
+      int index = dataReceived.toInt();
+      auto credentials = WIFI_LIST[index];
       Serial.print("[DEBUG] Got Wi-Fi choice from webpage: ");
       Serial.println(dataReceived);
-      // Use the received data in your code here
-      // begin and end prefs to write something
+      
+      prefs.begin("config");
+
+      prefs.putString("ssid", credentials.ssid);
+      prefs.putString("password", credentials.password);
+      prefs.putString("eap", credentials.eap);
+      prefs.putBool("isEnterprise", credentials.enterprise);
+
+      prefs.end();
     }
 
     request->send(200);
@@ -526,13 +550,17 @@ void setup() {
   server.on("/setclassroom", HTTP_POST, [](AsyncWebServerRequest *request){
     String dataReceived;
 
-    if(request->hasParam("classroom_id", true)) {
+    if (request->hasParam("classroom_id", true)) {
+      play_tone(3, 50, 100);
+
       dataReceived = request->getParam("classroom_id", true)->value();
       Serial.print("[DEBUG] Got CLASSROOM_ID choice from webpage: ");
       Serial.println(dataReceived);
 
       prefs.begin("config");
+
       prefs.putString("classroom", dataReceived);
+
       prefs.end();
     }
 
