@@ -181,10 +181,10 @@ Synchronous version of play_tone
 void play_tone_blocking(int count, int buzzTime = 200, int sleepTime = 200) {
   for (int i = 0; i < count; i++) {
     digitalWrite(BUZZER_PIN, HIGH);
-    vTaskDelay(pdMS_TO_TICKS(buzzTime));
+    delay(buzzTime);
 
     digitalWrite(BUZZER_PIN, LOW);
-    vTaskDelay(pdMS_TO_TICKS(sleepTime)));
+    delay(sleepTime);
   }
 }
 
@@ -525,7 +525,7 @@ void setup() {
     String dataReceived;
 
     if (request->hasParam("wifi", true)) {
-      play_tone(3, 50, 100);
+      play_tone_blocking(3, 50, 100);
 
       dataReceived = request->getParam("wifi", true)->value();
       int index = dataReceived.toInt();
@@ -551,7 +551,7 @@ void setup() {
     String dataReceived;
 
     if (request->hasParam("classroom_id", true)) {
-      play_tone(3, 50, 100);
+      play_tone_blocking(3, 50, 100);
 
       dataReceived = request->getParam("classroom_id", true)->value();
       Serial.print("[DEBUG] Got CLASSROOM_ID choice from webpage: ");
