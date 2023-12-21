@@ -5,11 +5,7 @@
 //#define OVERWRITE_ON_BOOT       // overwrite preferences stored on flash with hardcoded values
 
 // Note: Serial1 is free, can be assigned to GPIO 2, 4
-#include <rdm6300.h>         // rfid reader
 #include <WiFi.h>            // wifi
-#include <AsyncTCP.h>        // dependency for web server
-#include <Preferences.h>     // data storage on flash memory
-#include <ESPAsyncWebSrv.h>  // esp32 web server
 #include <esp_wpa2.h>        // esp32 WPA2-E support
 #include "secrets.hpp"
 #include "util.hpp"
