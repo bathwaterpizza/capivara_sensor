@@ -3,9 +3,11 @@
 #include <WiFi.h>            // wifi
 #include <HTTPClient.h>      // http
 #include <AsyncTCP.h>        // dependency for web server
+#include <Preferences.h>     // data storage on flash memory
 #include <ESPAsyncWebSrv.h>  // esp32 web server
 #include <esp_wpa2.h>        // esp32 WPA2-E support
 #include <mbedtls/md.h>      // esp32 hashing
+#include <ESP.h>             // esp32 software reboot
 
 // display libs
 #include <SPI.h>
@@ -23,6 +25,7 @@
 #define SSD1306_NO_SPLASH         // disable display startup art
 #define DISPLAY_I2C_ADDRESS 0x3C  // this address is specific to our display
 //#define DEBUG_IGNORE_WIFI       // useful for testing
+#define OVERWRITE_ON_BOOT       // overwrite preferences stored on flash with hardcoded values
 
 // globals
 bool stopDisconnectBeep = false;  // this is not a config var, do not change
@@ -30,6 +33,7 @@ Rdm6300 rdm6300;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 HTTPClient http;
 AsyncWebServer server(80);
+Preferences prefs;
 
 // this is the config webpage for the AP
 const char webpage[] PROGMEM = R"html(
@@ -59,8 +63,12 @@ const char webpage[] PROGMEM = R"html(
 			color: white;
 		}
 
+		label {
+			font-size: 3vh;
+		}
+
 		input[type="submit"] {
-			font-size: 50px;
+			font-size: 4vh;
 		}
   </style>
 </head>
@@ -81,7 +89,7 @@ const char webpage[] PROGMEM = R"html(
 			<input type="radio" id="i4" name="wifi" value="wifi_redmi">
 			<label for="i4">Redmi 9A</label><br><br>
 
-			<br><input type="submit" value="Save">
+			<br><input type="submit" value="Save and reboot">
 		</form>
 
 		<br><br><br>
@@ -91,7 +99,7 @@ const char webpage[] PROGMEM = R"html(
 			<label for="classroomid">CLASSROOM_ID:</label><br>
 			<input type="text" id="classroomid" name="classroom_id"><br><br>
 
-			<br><input type="submit" value="Save">
+			<br><input type="submit" value="Save and reboot">
 		</form>
 	</div>
 </body>
@@ -183,10 +191,13 @@ void task_http_post(void* params) {
   http.begin(POST_ADDRESS);
   http.addHeader("Content-Type", "application/json");
 
+  prefs.begin("config");
+
   int responseCode = http.POST(  // this call is blocking
-    "{\"tag_id\":\"" + paramStr[0] + "\",\"classroom_id\":\"" + String(CLASSROOM_ID) + "\"}");
+    "{\"tag_id\":\"" + paramStr[0] + "\",\"classroom_id\":\"" + prefs.getString("classroom", "KEY NOT FOUND") + "\"}");
   String responseData = http.getString();
 
+  prefs.end();
   http.end();
 
   Serial.print(F("[DEBUG] Response code: "));
@@ -308,9 +319,10 @@ void print_display_idle_info(bool onTagRead = false) {
     display.println(F("Wi-Fi sem sinal!"));
   }
 
+  prefs.begin("config");
 
   display.setCursor(0, 9);
-  display.println("Sala " + String(CLASSROOM_ID));
+  display.println("Sala " + prefs.getString("classroom", "KEY NOT FOUND"));
 
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
@@ -332,6 +344,7 @@ void print_display_idle_info(bool onTagRead = false) {
   }
 
   display.display();
+  prefs.end();
 }
 
 /*
@@ -385,14 +398,17 @@ void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
   stopDisconnectBeep = false;
   play_tone(2);
 
+  prefs.begin("config");
+
   Serial.print(F("[INFO ] Wi-Fi STA Connected to "));
-  Serial.print(SSID);
+  Serial.print(prefs.getString("ssid", "KEY NOT FOUND"));
   Serial.print(F("! IP: "));
   Serial.print(WiFi.localIP());
   Serial.print(F(" | MAC: "));
   Serial.println(WiFi.macAddress());
 
   print_display_idle_info();
+  prefs.end();
 }
 
 /*
@@ -434,6 +450,18 @@ void setup() {
   Serial2.begin(RDM6300_BAUDRATE, SERIAL_8N1, 19, 22);  // RX/TX 2
   rdm6300.begin(&Serial2);
 
+#ifdef OVERWRITE_ON_BOOT
+  prefs.begin("config");
+
+  prefs.putString("ssid", SSID);
+  prefs.putString("password", PASSWORD);
+  prefs.putString("eap", EAP_USERNAME);
+  prefs.putString("classroom", CLASSROOM_ID);
+  prefs.putBool("isEnterprise", WPA2_ENTERPRISE);
+
+  prefs.end();
+#endif
+
 #ifndef DEBUG_IGNORE_WIFI
   // wifi setup
   WiFi.disconnect(true);  // clean up previous connections
@@ -458,20 +486,58 @@ void setup() {
   Serial.print(F("[INFO ] AP IP is "));
   Serial.println(WiFi.softAPIP());
 
+  // flash storage init
+  prefs.begin("config");
+
   Serial.print(F("[INFO ] STA Connecting to "));
-  Serial.println(SSID);
+  Serial.println(prefs.getString("ssid", "KEY NOT FOUND"));
 
-  //WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_ANONYMOUS_IDENTITY, EAP_IDENTITY, PASSWORD, certificate); // with cert
-
-  if (WPA2_ENTERPRISE) {
-    WiFi.begin(SSID, WPA2_AUTH_PEAP, EAP_IDENTITY, EAP_USERNAME, PASSWORD);  // without cert, wpa2-e
+  if (prefs.getBool("isEnterprise")) {
+    // without cert, wpa2-e
+    WiFi.begin(prefs.getString("ssid"), WPA2_AUTH_PEAP, prefs.getString("eap"), prefs.getString("eap"), prefs.getString("password"));
   } else {
-    WiFi.begin(SSID, PASSWORD);  // without cert, wpa2-psk
+    // without cert, wpa2-psk
+    WiFi.begin(prefs.getString("ssid"), prefs.getString("password"));
   }
 
-  // AP server setup
+  // save
+  prefs.end();
+
+  // AP local server setup
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send_P(200, "text/html", webpage);
+  });
+
+  server.on("/setwifi", HTTP_POST, [](AsyncWebServerRequest *request){
+    String dataReceived;
+
+    if(request->hasParam("wifi", true)) {
+      dataReceived = request->getParam("wifi", true)->value();
+      Serial.print("[DEBUG] Got Wi-Fi choice from webpage: ");
+      Serial.println(dataReceived);
+      // Use the received data in your code here
+      // begin and end prefs to write something
+    }
+
+    request->send(200);
+    ESP.restart();
+  });
+
+  server.on("/setclassroom", HTTP_POST, [](AsyncWebServerRequest *request){
+    String dataReceived;
+
+    if(request->hasParam("classroom_id", true)) {
+      dataReceived = request->getParam("classroom_id", true)->value();
+      Serial.print("[DEBUG] Got CLASSROOM_ID choice from webpage: ");
+      Serial.println(dataReceived);
+      
+      prefs.begin("config");
+      prefs.putString("classroom", dataReceived);
+      prefs.end();
+    }
+
+    request->send(200);  	
+    ESP.restart();
   });
 
   server.begin();
