@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include "util.hpp"
 
 /*
@@ -81,4 +80,21 @@ void play_tone_blocking(int count, int buzzTime, int sleepTime) {
     digitalWrite(BUZZER_PIN, LOW);
     delay(sleepTime);
   }
+}
+
+/*
+Takes the array of bytes output from hashing and converts it to a hexadecimal string,
+which is the usual text representation, to send over wifi
+*/
+String hash_bytes_to_hex_str(byte* hash) {
+  String hexStr = "";
+
+  for (int i = 0; i < 32; i++) {
+    if (hash[i] < 0x10)
+      hexStr += '0';
+
+    hexStr += String(hash[i], HEX);
+  }
+
+  return hexStr;
 }
