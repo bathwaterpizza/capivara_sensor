@@ -1,6 +1,8 @@
 // config
 #define SERIAL2_RX_PIN 19
 #define SERIAL2_TX_PIN 22
+#define AP_LOCAL_IP 192, 168, 1, 1
+#define AP_SUBNET_MASK 255, 255, 255, 0
 //#define DEBUG_IGNORE_WIFI       // useful for testing
 //#define OVERWRITE_ON_BOOT       // overwrite preferences stored on flash with hardcoded values
 
@@ -68,8 +70,8 @@ void setup() {
 
   WiFi.mode(WIFI_AP_STA);             // act as both client and hotspot
   WiFi.softAP(AP_SSID, AP_PASSWORD);  // hotspot settings
-  IPAddress defaultIP(192, 168, 1, 1);
-  IPAddress subnetMask(255, 255, 255, 0);
+  IPAddress defaultIP(AP_LOCAL_IP);
+  IPAddress subnetMask(AP_SUBNET_MASK);
   WiFi.softAPConfig(defaultIP, defaultIP, subnetMask);
 
   Serial.print(F("[INFO ] AP IP is "));
