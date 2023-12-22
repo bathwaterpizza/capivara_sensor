@@ -2,7 +2,7 @@
 
 This repo describes the device component of project **CAPIVARA** (**C**ircuito **A**utomatizado **P**or **I**nternet **V**isando o **A**companhamento **R**eal de **A**lunos), developed during the second semester of 2023 for our Interactive Applications Project (INF1039) class. It is an attempt to automate the error-prone and time-consuming task of keeping track of students' attendance by introducing a complete, automated system, which requires minimal interaction. As of December 2023, it is being used by two professors at PUC-Rio.
 
-We started with identifying the problem, by interviewing students and teachers, and understanding the pain points of manually registering attendance with traditional procedures, such as a roll call. Then, we moved on to choosing technologies with the help of our advisor professor, and finally prototyping, which went through several iterations, as well as pitching the solution to our classmates.
+We started with identifying the problem, by interviewing students and teachers, and understanding the pain points of manually registering attendance with traditional procedures, such as a roll call. Then, we moved on to choosing technologies with the help of our advisor professor, prototyping through several iterations, and finally pitching the solution to an evaluation panel.
 
 The final product consists of a portable device which reads the RFID tag inside each student's university ID card and communicates with our server, as well as a web interface for students and professors with a variety of features:
 
@@ -30,9 +30,9 @@ Our current device consists of an ESP32-WROOM-32U development board, a variation
 
 The device's status is shown at all times in the display, along with unique buzzer beep patterns for different states, and the two LEDs indicating connection status and reader activity. In addition, there used to be a speaker module welcoming the students with our professor's voice, but the idea was scraped after we realized how annoying it was.
 
-Once powered on, it will...
+Once powered on, it will attempt to connect to a Wi-Fi AP as configured, while also acting as an AP itself for hosting its own configuration webpage. In case the connection is lost, it will warn users and periodically try to reconnect.
 
-> mention AP config server
+After internet connection is established, it will continually check for nearby valid RFID tags. If a tag is detected, an HTTP POST request is sent to our server, containing a hash of the unique tag ID and the classroom where the device is located, which is necessary to resolve possible ambiguities when multiple devices are active. It also expects a response from the server containing the student's name, which is then briefly displayed on the device.
 
 ## Dependencies
 
