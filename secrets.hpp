@@ -7,8 +7,6 @@ You must define OVERWRITE_ON_BOOT in order to save these to flash preferences
 
 #pragma once
 
-#define WIFI_LIST_SIZE 4
-
 // this is used to provide the wifi options available on the config webpage
 struct wifi_creds_struct {
   const char* ssid;
@@ -18,7 +16,7 @@ struct wifi_creds_struct {
 };
 typedef struct wifi_creds_struct WiFiCredentials;
 
-extern const WiFiCredentials WIFI_LIST[WIFI_LIST_SIZE];
+extern const WiFiCredentials WIFI_LIST[];
 
 extern const char* CLASSROOM_ID;    // classroom name, e.g. "L540"
 extern const char* POST_ADDRESS;    // URL for the HTTP POST request
