@@ -36,7 +36,7 @@ After internet connection is established, it will continually check for nearby v
 
 ## Dependencies
 
-In addition to ESP32 Dev Module board support, the following libraries must be installed in the Arduino IDE to compile this sketch:
+In addition to ESP32 Dev Module board support and installing drivers for your board's USB-Serial chip, the following libraries must be installed in the Arduino IDE to compile this sketch:
 
 - [RDM6300](https://github.com/arduino12/rdm6300) (RFID Reader)
 - [Adafruit SSD1306](https://github.com/adafruit/Adafruit_SSD1306) (OLED Display)
