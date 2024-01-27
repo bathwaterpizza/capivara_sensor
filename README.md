@@ -20,15 +20,15 @@ Initially, I assembled a prototype with the ESP8266 SoC running the NodeMCU firm
 
 Our current device consists of an ESP32-WROOM-32U development board, a variation with support for external antennas, which is necessary for connectivity in some locations. The microcontroller can be powered by a common smartphone Power Bank, and is connected to the following components:
 
-- Green and blue LEDs
+- ~~Green and blue LEDs~~ (removed in final product)
 - Active buzzer
 - 2.42'' OLED display
 - RDM6300 125KHz RFID reader
-- ~~DFPlayer Mini amplifier~~ (no longer used)
+- ~~DFPlayer Mini amplifier~~ (removed in final product)
 
 ## How it works
 
-The device's status is shown at all times in the display, along with unique buzzer beep patterns for different states, and the two LEDs indicating connection status and reader activity. In addition, there used to be a speaker module welcoming the students with our professor's voice, but the idea was scraped after we realized how annoying it was.
+The device's status is shown at all times in the display, along with unique buzzer beep patterns for different states, ~~and the two LEDs indicating connection status and reader activity~~. In addition, there used to be a speaker module welcoming the students with our professor's voice, but the idea was scrapped after we realized how annoying it was, as well as for simplifying assembly and reducing the size of the device.
 
 Once powered on, it will attempt to connect to a Wi-Fi AP as configured, while also acting as an AP itself for hosting its own configuration webpage. In case the connection is lost, it will warn users and periodically try to reconnect.
 
@@ -56,6 +56,8 @@ In addition to ESP32 Dev Module board support, the following libraries must be i
 <img src="media/img4.jpg">
 
 <img src="media/img5.jpg">
+
+<img src="media/img6.jpg">
 
 <br>
 
