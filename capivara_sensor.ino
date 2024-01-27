@@ -19,11 +19,11 @@
 
 void setup() {
   // pin setup
-  pinMode(RFID_READ_LED_PIN, OUTPUT);
-  pinMode(WIFI_CONNECTED_LED_PIN, OUTPUT);
+  // pinMode(RFID_READ_LED_PIN, OUTPUT);
+  // pinMode(WIFI_CONNECTED_LED_PIN, OUTPUT);
   pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(RFID_READ_LED_PIN, LOW);
-  digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
+  // digitalWrite(RFID_READ_LED_PIN, LOW);
+  // digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
   digitalWrite(BUZZER_PIN, LOW);
 
   // serial debug setup
@@ -107,7 +107,7 @@ void setup() {
 
 void loop() {
   if (rdm6300.get_new_tag_id()) {  // true when a new tag shows up in the buffer
-    blink_read_led();
+    // blink_read_led();
     play_tone(1);
 
     uint32_t tag = rdm6300.get_tag_id();

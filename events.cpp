@@ -10,7 +10,7 @@
 Called when we get assigned an IP at the network we're connecting to
 */
 void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
-  digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
+  // digitalWrite(WIFI_CONNECTED_LED_PIN, HIGH);
   stopDisconnectBeep = false;
   play_tone(2);
 
@@ -31,7 +31,7 @@ void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info) {
 Called when the wifi connection is lost or reset
 */
 void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
-  digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
+  // digitalWrite(WIFI_CONNECTED_LED_PIN, LOW);
   if (!stopDisconnectBeep) {
     stopDisconnectBeep = true;
     play_tone(3);
