@@ -1,6 +1,6 @@
 #include "events.hpp"
 #include <Preferences.h>  // flash storage
-#include <ESP.h>          // esp32 software reboot
+#include <Esp.h>          // esp32 software reboot
 #include "globals.hpp"
 #include "util.hpp"
 #include "display.hpp"
