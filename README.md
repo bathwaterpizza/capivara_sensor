@@ -59,6 +59,8 @@ In addition to ESP32 Dev Module board support and installing drivers for your bo
 
 <img src="media/img6.jpg">
 
+<img src="media/img7.png">
+
 <br>
 
 # Team
