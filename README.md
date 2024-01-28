@@ -43,7 +43,7 @@ In addition to ESP32 Dev Module board support and installing drivers for your bo
 - [ESPAsyncWebServer](https://github.com/dvarrel/ESPAsyncWebSrv) (Web server on AP mode)
 - [Preferences](https://github.com/vshymanskyy/Preferences) (Flash memory storage)
 
-## Schematic
+## Simplified schematic
 
 <img src="media/img7.png">
 
