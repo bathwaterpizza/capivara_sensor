@@ -4,15 +4,15 @@ This repo describes the device component of project **CAPIVARA** (**C**ircuito *
 
 We started with identifying the problem, by interviewing students and teachers, and understanding the pain points of manually registering attendance with traditional procedures, such as a roll call. Then, we moved on to choosing technologies with the help of our advisor professor, prototyping through several iterations, and finally pitching the solution to an evaluation panel.
 
-The final product consists of a portable device which reads the RFID tag inside each student's university ID card and communicates with our server, as well as a web interface for students and professors with a variety of features:
+The final product consists of a portable device, which reads the RFID tag inside each student's university ID card and communicates with our server, as well as a web interface for students and professors with a variety of features:
 
-- Optional notifications for users
-- Students can justify their absences
-- Setting a time tolerance for arriving late
-- Graphical visualization of attendance patterns
-- Optional requirement of entry and exit logging
-- Interfacing with the university system to export attendance data
-- Webhooks for interfacing with other systems, such as a reward program
+-   Optional notifications for users
+-   Students can justify their absences
+-   Setting a time tolerance for arriving late
+-   Graphical visualization of attendance patterns
+-   Optional requirement of entry and exit logging
+-   Interfacing with the university system to export attendance data
+-   Webhooks for interfacing with other systems, such as a reward program
 
 # Device
 
@@ -20,11 +20,11 @@ Initially, I assembled a prototype with the ESP8266 SoC running the NodeMCU firm
 
 Our current device consists of an ESP32-WROOM-32U development board, a variation with support for external antennas, which is necessary for connectivity in some locations. The microcontroller can be powered by a common smartphone Power Bank, and is connected to the following components:
 
-- ~~Green and blue LEDs~~ (removed in final product)
-- Active buzzer
-- 2.42'' OLED display
-- RDM6300 125KHz RFID reader
-- ~~DFPlayer Mini amplifier~~ (removed in final product)
+-   ~~Green and blue LEDs~~ (removed in final product)
+-   Active buzzer
+-   2.42'' OLED display
+-   RDM6300 125KHz RFID reader
+-   ~~DFPlayer Mini amplifier~~ (removed in final product)
 
 ## How it works
 
@@ -38,10 +38,10 @@ After internet connection is established, it will continually check for nearby v
 
 In addition to ESP32 Dev Module board support and installing drivers for your board's USB-Serial chip, the following libraries must be installed in the Arduino IDE to compile this sketch:
 
-- [RDM6300](https://github.com/arduino12/rdm6300) (RFID Reader)
-- [Adafruit SSD1306](https://github.com/adafruit/Adafruit_SSD1306) (OLED Display)
-- [ESPAsyncWebServer](https://github.com/dvarrel/ESPAsyncWebSrv) (Web server on AP mode)
-- [Preferences](https://github.com/vshymanskyy/Preferences) (Flash memory storage)
+-   [RDM6300](https://github.com/arduino12/rdm6300) (RFID Reader)
+-   [Adafruit SSD1306](https://github.com/adafruit/Adafruit_SSD1306) (OLED Display)
+-   [ESPAsyncWebServer](https://github.com/dvarrel/ESPAsyncWebSrv) (Web server on AP mode)
+-   [Preferences](https://github.com/vshymanskyy/Preferences) (Flash memory storage)
 
 ## Simplified schematic
 
@@ -62,6 +62,8 @@ In addition to ESP32 Dev Module board support and installing drivers for your bo
 <img src="media/img5.jpg">
 
 <img src="media/img6.jpg">
+
+<img src="media/img8.jpg">
 
 <br>
 
