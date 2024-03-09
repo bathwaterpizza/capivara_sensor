@@ -74,7 +74,7 @@ void print_display_http_error(String tag) {
 /*
 Prints standard information to the display when idle, such as:
 - Wifi connection status
-- Current classroom
+- Current classroom_id
 - Reader status
 */
 void print_display_idle_info(bool onTagRead) {
@@ -95,7 +95,7 @@ void print_display_idle_info(bool onTagRead) {
   prefs.begin("config");
 
   display.setCursor(0, 9);
-  display.println("Sala " + prefs.getString("classroom", "KEY NOT FOUND"));
+  display.println("Turma " + prefs.getString("classroom", "KEY NOT FOUND"));
 
   display.setTextSize(2);
   display.setTextColor(SSD1306_WHITE);
