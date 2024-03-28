@@ -9,5 +9,4 @@
 void on_wifi_connect(WiFiEvent_t event, WiFiEventInfo_t info);
 void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info);
 
-void on_route_setwifi(AsyncWebServerRequest *request);
-void on_route_setclassroom(AsyncWebServerRequest *request);
+void on_route_setcfg(AsyncWebServerRequest *request);

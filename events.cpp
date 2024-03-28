@@ -42,21 +42,24 @@ void on_wifi_disconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
   print_display_idle_info();
 }
 
-
 /*
-Called when a client requests the setwifi route from our web server AP
+Called when a client submits the device settings form in our web server AP
 */
-void on_route_setwifi(AsyncWebServerRequest *request) {
-  String dataReceived;
+void on_route_setcfg(AsyncWebServerRequest *request) {
+  String wifiDataReceived, classroomDataReceived;
 
-  if (request->hasParam("wifi", true)) {
+  if (request->hasParam("wifi", true) && request->hasParam("classroom_id", true)) {
     play_tone_blocking(2, 50, 150);
 
-    dataReceived = request->getParam("wifi", true)->value();
-    int index = dataReceived.toInt();
+    wifiDataReceived = request->getParam("wifi", true)->value();
+    int index = wifiDataReceived.toInt();
     auto credentials = WIFI_LIST[index];
     Serial.print("[DEBUG] Got Wi-Fi choice from webpage: ");
-    Serial.println(dataReceived);
+    Serial.println(wifiDataReceived);
+
+    classroomDataReceived = request->getParam("classroom_id", true)->value();
+    Serial.print("[DEBUG] Got CLASSROOM_ID choice from webpage: ");
+    Serial.println(classroomDataReceived);
 
     prefs.begin("config");
 
@@ -64,28 +67,6 @@ void on_route_setwifi(AsyncWebServerRequest *request) {
     prefs.putString("password", credentials.password);
     prefs.putString("eap", credentials.eap);
     prefs.putBool("isEnterprise", credentials.enterprise);
-
-    prefs.end();
-  }
-
-  request->send(200);
-  ESP.restart();
-}
-
-/*
-Called when a client requests the setclassroom route from our web server AP
-*/
-void on_route_setclassroom(AsyncWebServerRequest *request) {
-  String dataReceived;
-
-  if (request->hasParam("classroom_id", true)) {
-    play_tone_blocking(2, 50, 150);
-
-    dataReceived = request->getParam("classroom_id", true)->value();
-    Serial.print("[DEBUG] Got CLASSROOM_ID choice from webpage: ");
-    Serial.println(dataReceived);
-
-    prefs.begin("config");
 
     prefs.putString("classroom", dataReceived);
 

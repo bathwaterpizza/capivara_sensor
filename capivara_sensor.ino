@@ -98,8 +98,7 @@ void setup() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     request->send_P(200, "text/html", webpage);
   });
-  server.on("/setwifi", HTTP_POST, on_route_setwifi);
-  server.on("/setclassroom", HTTP_POST, on_route_setclassroom);
+  server.on("/setcfg", HTTP_POST, on_route_setcfg);
 
   server.begin();
 #endif

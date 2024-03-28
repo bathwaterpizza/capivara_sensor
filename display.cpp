@@ -42,7 +42,7 @@ void print_display_welcome(String tag, String firstName) {
 
   display.setCursor(0, 40);
   if (!firstName.isEmpty()) {
-    display.println(firstName + "!");
+    display.println(firstName);
   } else {
     display.println("Aluno");
   }
