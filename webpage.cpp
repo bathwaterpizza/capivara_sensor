@@ -50,16 +50,16 @@ const char webpage[] PROGMEM = R"html(
       <br /><br />
 
       <form action="/setcfg" method="POST" class="centered-form">
-        <input type="radio" id="i1" name="wifi" value="0" />
+        <input type="radio" id="i1" name="wifi" value="0" required />
         <label for="i1">DI-GRAD</label><br /><br />
 
-        <input type="radio" id="i2" name="wifi" value="1" />
+        <input type="radio" id="i2" name="wifi" value="1" required />
         <label for="i2">Wi-Fi PUC</label><br /><br />
 
-        <input type="radio" id="i3" name="wifi" value="2" />
+        <input type="radio" id="i3" name="wifi" value="2" required />
         <label for="i3">LIENG</label><br /><br />
 
-        <input type="radio" id="i4" name="wifi" value="3" />
+        <input type="radio" id="i4" name="wifi" value="3" required />
         <label for="i4">Redmi 9A</label><br /><br />
 
         <br /><br />
