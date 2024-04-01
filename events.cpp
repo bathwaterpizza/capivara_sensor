@@ -68,7 +68,7 @@ void on_route_setcfg(AsyncWebServerRequest *request) {
     prefs.putString("eap", credentials.eap);
     prefs.putBool("isEnterprise", credentials.enterprise);
 
-    prefs.putString("classroom", dataReceived);
+    prefs.putString("classroom", classroomDataReceived);
 
     prefs.end();
   }
